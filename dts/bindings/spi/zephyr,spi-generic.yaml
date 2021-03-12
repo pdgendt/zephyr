@@ -1,0 +1,76 @@
+# Copyright 2021 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+description: Zephyr SPI Generic device
+
+compatible: "zephyr,spi-generic"
+
+include: spi-device.yaml
+
+properties:
+    int-gpios:
+      type: phandle-array
+      required: false
+    reset-gpios:
+      type: phandle-array
+      required: false
+    spi-slave:
+      type: boolean
+      required: false
+      description: |
+        Empty property indicating device is slave mode
+    spi-cpol:
+      type: boolean
+      required: false
+      description: |
+        Empty property indicating device requires
+        inverse clock polarity (CPOL) mode
+    spi-cpha:
+      type: boolean
+      required: false
+      description: |
+        Empty property indicating device requires
+        shifted clock phase (CPHA) mode
+    spi-loop:
+      type: boolean
+      required: false
+      description: |
+        Empty property indicating device sends data
+        looped-back to receiving buffer
+    spi-lsb-first:
+      type: boolean
+      required: false
+      description: |
+        Empty property indicating device requires
+        LSB first mode.
+    spi-cs-high:
+      type: boolean
+      required: false
+      description: |
+        Empty property indicating device requires
+        chip select active high
+    spi-cs-delay:
+      type: int
+      required: false
+      default: 0
+      description: |
+        Delay in microseconds to wait before starting the
+        transmission and before releasing the CS line
+    spi-bus-width:
+      type: int
+      required: false
+      default: 1
+      description: |
+        The bus width (number of data wires) that is
+        used for MISO. Defaults to 1 if not present.
+      enum:
+        - 1
+        - 2
+        - 4
+        - 8
+    spi-bits-per-word:
+      type: int
+      required: false
+      description: |
+        Word size for a data transfer. Defaults to 8
+        if not present

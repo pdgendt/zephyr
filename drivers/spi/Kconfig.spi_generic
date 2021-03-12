@@ -1,0 +1,8 @@
+# Copyright 2021 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+config SPI_GENERIC
+	bool "SPI generic device"
+	help
+	  Enable the SPI generic device driver, allowing to set up simple
+	  communication with optional interrupt and reset gpios.
