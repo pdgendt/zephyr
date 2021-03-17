@@ -64,6 +64,10 @@ void otPlatAlarmMilliStop(otInstance *aInstance)
 	k_timer_stop(&ot_timer);
 }
 
+uint64_t otPlatTimeGet(void)
+{
+	return k_ticks_to_us_floor64(k_uptime_ticks());
+}
 
 void platformAlarmProcess(otInstance *aInstance)
 {

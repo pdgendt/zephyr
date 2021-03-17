@@ -103,7 +103,11 @@ K_SEM_DEFINE(ot_sem, 0, 1);
 K_KERNEL_STACK_DEFINE(ot_stack_area, OT_STACK_SIZE);
 static struct k_thread ot_thread_data;
 static k_tid_t ot_tid;
+
+#ifndef CONFIG_OPENTHREAD_HOSTPROCESSOR
 static struct net_linkaddr *ll_addr;
+#endif
+
 static otStateChangedCallback state_changed_cb;
 
 k_tid_t openthread_thread_id_get(void)
@@ -131,12 +135,14 @@ static void ipv6_addr_event_handler(struct net_mgmt_event_callback *cb,
 }
 #endif
 
+#ifndef CONFIG_OPENTHREAD_HOSTPROCESSOR
 void otPlatRadioGetIeeeEui64(otInstance *instance, uint8_t *ieee_eui64)
 {
 	ARG_UNUSED(instance);
 
 	memcpy(ieee_eui64, ll_addr->addr, ll_addr->len);
 }
+#endif
 
 void otTaskletsSignalPending(otInstance *instance)
 {
@@ -438,7 +444,9 @@ static int openthread_init(struct net_if *iface)
 
 	k_mutex_init(&ot_context->api_lock);
 
+#ifndef CONFIG_OPENTHREAD_HOSTPROCESSOR
 	ll_addr = net_if_get_link_addr(iface);
+#endif
 
 	otSysInit(0, NULL);
 

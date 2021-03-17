@@ -1,0 +1,27 @@
+/*
+ * Copyright (c) 2021 Basalte bv
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+&lpspi1 {
+	status = "okay";
+	pcs-sck-delay = <3000>;
+	sck-pcs-delay = <3000>;
+	transfer-delay = <1000>;
+
+	spidev: spidev@3 {
+		compatible = "zephyr,spi-generic";
+		reg = <3>;
+		label = "SPI_DEV";
+
+		spi-max-frequency = <100000>;
+		spi-bits-per-word = <8>;
+		spi-bus-width = <1>;
+		spi-cs-delay = <20>;
+
+		int-gpios = <&gpio4 25 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&gpio1 14 GPIO_ACTIVE_LOW>;
+		status = "okay";
+	};
+};

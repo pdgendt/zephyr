@@ -6,10 +6,16 @@ zephyr_library_sources(
   entropy.c
   misc.c
   platform.c
-  radio.c
   settings.c
   spi.c
   )
+
+zephyr_library_sources_ifndef(CONFIG_OPENTHREAD_HOSTPROCESSOR radio.c)
+zephyr_library_sources_ifdef(CONFIG_OPENTHREAD_HOSTPROCESSOR
+  dummy_iface.c
+  radio_spinel_host_spi.cpp
+  spi_host.c
+)
 
 zephyr_library_sources_ifdef(CONFIG_OPENTHREAD_DIAG diag.c)
 zephyr_library_sources_ifdef(CONFIG_OPENTHREAD_COPROCESSOR uart.c)

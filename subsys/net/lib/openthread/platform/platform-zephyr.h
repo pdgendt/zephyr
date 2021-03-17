@@ -18,6 +18,10 @@
 #include <openthread/instance.h>
 #include <net/net_pkt.h>
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 /**
  * This function initializes the alarm service used by OpenThread.
  *
@@ -92,5 +96,9 @@ int notify_new_rx_frame(struct net_pkt *pkt);
  * Notify OpenThread task about new tx message.
  */
 int notify_new_tx_frame(struct net_pkt *pkt);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif  /* PLATFORM_POSIX_H_ */

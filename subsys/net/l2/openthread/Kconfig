@@ -8,11 +8,6 @@ menuconfig NET_L2_OPENTHREAD
 	depends on NETWORKING
 
 	select SETTINGS
-	select FLASH
-	select FLASH_PAGE_LAYOUT
-	select FLASH_MAP
-	select MPU_ALLOW_FLASH_WRITE
-	select NVS
 
 	select CPLUSPLUS
 	select REBOOT
@@ -225,6 +220,27 @@ config OPENTHREAD_COPROCESSOR_VENDOR_HOOK_SOURCE
 	  Provides path to compile vendor hook file.
 
 endif # OPENTHREAD_COPROCESSOR
+
+config OPENTHREAD_HOSTPROCESSOR
+	bool "OpenThread Host-Processor"
+	depends on !OPENTHREAD_COPROCESSOR
+	help
+	  Enable Host-Processor in OpenThread stack.
+
+if OPENTHREAD_HOSTPROCESSOR
+
+config OPENTHREAD_HOSTPROCESSOR_SPINEL_ON_GENERIC_SPI_DEV_NAME
+	string "Generic SPI device to use for Host-Processor SPINEL"
+	default "SPI_DEV"
+	help
+	  Generic SPI device to use for Host-Processor SPINEL.
+
+config OPENTHREAD_HOSTPROCESSOR_SPINEL_RESET_RADIO
+	bool "Reset radio on start"
+	help
+	  Enable if the radio should reset during initialization.
+
+endif # OPENTHREAD_HOSTPROCESSOR
 
 config OPENTHREAD_PLATFORM_INFO
 	string "Platform information for OpenThread"
