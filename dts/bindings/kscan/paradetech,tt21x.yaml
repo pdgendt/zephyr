@@ -1,0 +1,16 @@
+# Copyright (c) 2021 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+description: TT21X capacitive touch panels
+
+compatible: "paradetech,tt21x"
+
+include: [kscan.yaml, i2c-device.yaml]
+
+properties:
+    reset-gpios:
+      type: phandle-array
+      required: true
+    int-gpios:
+      type: phandle-array
+      required: false
