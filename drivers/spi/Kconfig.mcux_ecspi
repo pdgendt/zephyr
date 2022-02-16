@@ -1,0 +1,22 @@
+# MCUXpresso SDK SPI
+
+# Copyright (c) 2022, Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+config SPI_MCUX_ECSPI
+	bool "MCUX ECSPI driver"
+	depends on HAS_MCUX_ECSPI && CLOCK_CONTROL
+	help
+	  Enable support for mcux ecspi driver.
+
+if SPI_MCUX_ECSPI
+
+config SPI_MCUX_ECSPI_MAX_TRANSFER_SIZE
+	int "MCUX ECSPI driver max transfer size"
+	default 32
+	help
+	  This driver requires an uint32_t internal buffer
+	  for each transfer. Set this to the maximum number
+	  of words to be sent.
+
+endif

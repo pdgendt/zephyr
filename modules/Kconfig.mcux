@@ -57,6 +57,12 @@ config HAS_MCUX_PCC
 	  Set if the peripheral clock controller module (PCC) module is
 	  present in the SoC.
 
+config HAS_MCUX_ECSPI
+	bool
+	help
+	  Set if the enhanced configurable SPI interface (ECSPI) module is present in the
+	  SoC.
+
 config HAS_MCUX_ELCDIF
 	bool
 	help
