@@ -108,6 +108,21 @@ static void SOC_ClockInit(void)
 	/* Set root clock to 80MHZ/ 1= 80MHZ */
 	CLOCK_SetRootDivider(kCLOCK_RootUart4, 1U, 1U);
 
+	/* Set ECSPI1 source to SYSTEM PLL1 800MHZ */
+	CLOCK_SetRootMux(kCLOCK_RootEcspi1, kCLOCK_EcspiRootmuxSysPll1);
+	/* Set root clock to 800MHZ / 10 = 80MHZ */
+	CLOCK_SetRootDivider(kCLOCK_RootEcspi1, 2U, 5U);
+
+	/* Set ECSPI2 source to SYSTEM PLL1 800MHZ */
+	CLOCK_SetRootMux(kCLOCK_RootEcspi2, kCLOCK_EcspiRootmuxSysPll1);
+	/* Set root clock to 800MHZ / 10 = 80MHZ */
+	CLOCK_SetRootDivider(kCLOCK_RootEcspi2, 2U, 5U);
+
+	/* Set ECSPI3 source to SYSTEM PLL1 800MHZ */
+	CLOCK_SetRootMux(kCLOCK_RootEcspi3, kCLOCK_EcspiRootmuxSysPll1);
+	/* Set root clock to 800MHZ / 10 = 80MHZ */
+	CLOCK_SetRootDivider(kCLOCK_RootEcspi3, 2U, 5U);
+
 	/* Enable RDC clock */
 	CLOCK_EnableClock(kCLOCK_Rdc);
 
@@ -126,6 +141,10 @@ static void SOC_ClockInit(void)
 	CLOCK_EnableClock(kCLOCK_Sec_Debug);
 
 	CLOCK_EnableClock(kCLOCK_Uart4);
+
+	CLOCK_EnableClock(kCLOCK_Ecspi1);
+	CLOCK_EnableClock(kCLOCK_Ecspi2);
+	CLOCK_EnableClock(kCLOCK_Ecspi3);
 }
 
 static int nxp_mimx8mm6_init(const struct device *arg)

@@ -45,4 +45,11 @@ config IPM_IMX_REV2
 	default y
 	depends on IPM
 
+if SPI
+
+config SPI_MCUX_ECSPI
+	default y if HAS_MCUX_ECSPI
+
+endif # SPI
+
 endif # SOC_MIMX8MM6
