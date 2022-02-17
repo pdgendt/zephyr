@@ -18,4 +18,18 @@
 		};
 	};
 
+	ecspi2_default: ecspi2_default {
+		group0 {
+			pinmux = <&iomuxc_ecspi2_miso_ecspi_miso_ecspi2_miso>,
+				<&iomuxc_ecspi2_mosi_ecspi_mosi_ecspi2_mosi>;
+			slew-rate = "fast";
+			/* TODO */
+		};
+		group1 {
+			pinmux = <<&iomuxc_ecspi2_sclk_ecspi_sclk_ecspi2_sclk>,
+				<&iomuxc_ecspi2_ss0_ecspi_ss_ecspi2_ss0>;
+			slew-rate = "fast";
+			/* TODO */
+		};
+	};
 };

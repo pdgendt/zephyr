@@ -33,6 +33,11 @@
 	pinctrl-names = "default";
 };
 
+&ecspi2 {
+	pinctrl-0 = <&ecspi2_default>;
+	pinctrl-names = "default";
+};
+
 &mailbox0 {
 	status = "okay";
 };
