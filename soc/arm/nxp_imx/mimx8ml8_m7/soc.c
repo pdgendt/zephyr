@@ -113,6 +113,27 @@ static void SOC_ClockInit(void)
 	CLOCK_SetRootDivider(kCLOCK_RootUart4, 1U, 1U);
 #endif
 
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ecspi1), okay) && CONFIG_SPI_MCUX_ECSPI
+    /* Set ECSPI1 source to SYSTEM PLL1 800MHZ */
+    CLOCK_SetRootMux(kCLOCK_RootEcspi1, kCLOCK_EcspiRootmuxSysPll1);
+    /* Set root clock to 800MHZ / 10 = 80MHZ */
+    CLOCK_SetRootDivider(kCLOCK_RootEcspi1, 2U, 5U);
+#endif
+
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ecspi2), okay) && CONFIG_SPI_MCUX_ECSPI
+    /* Set ECSPI2 source to SYSTEM PLL1 800MHZ */
+    CLOCK_SetRootMux(kCLOCK_RootEcspi2, kCLOCK_EcspiRootmuxSysPll1);
+    /* Set root clock to 800MHZ / 10 = 80MHZ */
+    CLOCK_SetRootDivider(kCLOCK_RootEcspi2, 2U, 5U);
+#endif
+
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ecspi3), okay) && CONFIG_SPI_MCUX_ECSPI
+    /* Set ECSPI3 source to SYSTEM PLL1 800MHZ */
+    CLOCK_SetRootMux(kCLOCK_RootEcspi3, kCLOCK_EcspiRootmuxSysPll1);
+    /* Set root clock to 800MHZ / 10 = 80MHZ */
+    CLOCK_SetRootDivider(kCLOCK_RootEcspi3, 2U, 5U);
+#endif
+
 	CLOCK_EnableClock(kCLOCK_Rdc);   /* Enable RDC clock */
 	CLOCK_EnableClock(kCLOCK_Ocram); /* Enable Ocram clock */
 
@@ -129,6 +150,16 @@ static void SOC_ClockInit(void)
 
 #if DT_NODE_HAS_STATUS(DT_NODELABEL(uart4), okay) && CONFIG_UART_MCUX_IUART
 	CLOCK_EnableClock(kCLOCK_Uart4);
+#endif
+
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ecspi1), okay) && CONFIG_SPI_MCUX_ECSPI
+    CLOCK_EnableClock(kCLOCK_Ecspi1);
+#endif
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ecspi1), okay) && CONFIG_SPI_MCUX_ECSPI
+    CLOCK_EnableClock(kCLOCK_Ecspi2);
+#endif
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ecspi1), okay) && CONFIG_SPI_MCUX_ECSPI
+    CLOCK_EnableClock(kCLOCK_Ecspi3);
 #endif
 }
 
