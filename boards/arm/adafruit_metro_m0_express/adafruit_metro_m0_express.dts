@@ -1,0 +1,88 @@
+/*
+ * Copyright (c) 2018 Henrik Brix Andersen <henrik@brixandersen.dk>
+ * Copyright (c) 2022 Pieter De Gendt <pieter.degendt@gmail.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include <atmel/samd21.dtsi>
+#include "adafruit_metro_m0_express-pinctrl.dtsi"
+
+/ {
+	model = "Adafruit Metro M0 Express";
+	compatible = "adafruit,metro-m0-express", "atmel,samd21g18a", "atmel,samd21";
+
+	chosen {
+		zephyr,console = &sercom0;
+		zephyr,shell-uart = &sercom0;
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &code_partition;
+	};
+
+	/* These aliases are provided for compatibility with samples */
+	aliases {
+		led0 = &led0;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		led0: led_0 {
+			gpios = <&porta 17 0>;
+			label = "LED";
+		};
+	};
+};
+
+&cpu0 {
+	clock-frequency = <48000000>;
+};
+
+&sercom0 {
+	status = "okay";
+	compatible = "atmel,sam0-uart";
+	current-speed = <115200>;
+	rxpo = <3>;
+	txpo = <1>;
+
+	pinctrl-0 = <&sercom0_uart_default>;
+	pinctrl-names = "default";
+};
+
+&flash0 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		boot_partition: partition@0 {
+			label = "uf2";
+			reg = <0x00000000 0x2000>;
+			read-only;
+		};
+
+		code_partition: partition@2000 {
+			label = "code";
+			reg = <0x2000 0x3A000>;
+			read-only;
+		};
+
+		/*
+		 * The final 16 KiB is reserved for the application.
+		 * Storage partition will be used by FCB/LittleFS/NVS
+		 * if enabled.
+		 */
+		storage_partition: partition@3c000 {
+			label = "storage";
+			reg = <0x0003c000 0x00004000>;
+		};
+	};
+};
+
+&usb0 {
+	status = "okay";
+
+	pinctrl-0 = <&usb_dc_default>;
+	pinctrl-names = "default";
+};

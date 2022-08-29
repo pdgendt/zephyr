@@ -1,0 +1,8 @@
+# Adafruit Metro M0 Express board configuration
+
+# Copyright (c) 2022 Pieter De Gendt <pieter.degendt@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+config BOARD
+	default "adafruit_metro_m0_express"
+	depends on BOARD_ADAFRUIT_METRO_M0_EXPRESS
