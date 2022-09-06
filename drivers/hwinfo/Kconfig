@@ -151,4 +151,12 @@ config HWINFO_ANDES
 	help
 	  Enable Andes hwinfo driver
 
+config HWINFO_GPIO_REV
+	bool "GPIO revision indicator"
+	default y
+	depends on DT_HAS_ZEPHYR_GPIO_REVISION_ENABLED
+	select GPIO
+	help
+	  Enable revision indicator driver that uses GPIO inputs.
+
 endif

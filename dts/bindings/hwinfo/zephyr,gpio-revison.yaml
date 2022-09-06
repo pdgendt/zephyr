@@ -1,0 +1,17 @@
+# Copyright (c) 2022, Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+description: zephyr GPIO controlled revision indicator
+
+compatible: "zephyr,gpio-revision"
+
+include: base.yaml
+
+properties:
+    gpios:
+      type: phandle-array
+      required: true
+      description: |
+        Pins used to determine revision number.
+        Each gpio corresponds to a single bit in the revision number,
+        in order from MSB to LSB.
