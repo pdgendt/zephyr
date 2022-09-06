@@ -25,3 +25,8 @@ int __weak z_impl_hwinfo_get_supported_reset_cause(uint32_t *supported)
 {
 	return -ENOSYS;
 }
+
+int __weak z_impl_hwinfo_get_device_revision(uint32_t *revision)
+{
+	return -ENOSYS;
+}

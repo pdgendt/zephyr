@@ -123,6 +123,23 @@ __syscall int hwinfo_get_supported_reset_cause(uint32_t *supported);
 int z_impl_hwinfo_get_supported_reset_cause(uint32_t *supported);
 
 /**
+ * @brief      Get the device revision
+ *
+ * @param      revision  Variable to store the revision
+ *
+ * This routine retrieves the revision of the device if implemented.
+ *
+ * Successive calls to this routine will return the same value.
+ *
+ * @retval zero if successful.
+ * @retval -ENOSYS if there is no implementation for the particular device.
+ * @retval any negative value on driver specific errors.
+ */
+__syscall int hwinfo_get_device_revision(uint32_t *revision);
+
+int z_impl_hwinfo_get_device_revision(uint32_t *revision);
+
+/**
  * @}
  */
 

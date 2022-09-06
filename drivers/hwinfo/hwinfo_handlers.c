@@ -45,3 +45,15 @@ int z_vrfy_hwinfo_get_supported_reset_cause(uint32_t *supported)
 	return ret;
 }
 #include <syscalls/hwinfo_get_supported_reset_cause_mrsh.c>
+
+int z_vrfy_hwinfo_get_device_revision(uint32_t *revision)
+{
+	int ret;
+	uint32_t revision_copy;
+
+	ret = z_impl_hwinfo_get_device_revision(&revision_copy);
+	Z_OOPS(z_user_to_copy(revision, &revision_copy, sizeof(uint32_t)));
+
+	return ret;
+}
+#include <syscalls/hwinfo_get_device_revision_mrsh.c>
