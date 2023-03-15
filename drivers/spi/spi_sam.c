@@ -21,9 +21,6 @@ LOG_MODULE_REGISTER(spi_sam);
 
 #define SAM_SPI_CHIP_SELECT_COUNT			4
 
-/* Number of bytes in transfer before using DMA if available */
-#define SAM_SPI_DMA_THRESHOLD                           32
-
 /* Device constant configuration parameters */
 struct spi_sam_config {
 	Spi *regs;
@@ -466,7 +463,7 @@ static inline void spi_sam_rx(const struct device *dev,
 #ifdef CONFIG_SPI_SAM_DMA
 	const struct spi_sam_config *cfg = dev->config;
 
-	if (rx->len < SAM_SPI_DMA_THRESHOLD || cfg->dma_dev == NULL) {
+	if (rx->len < CONFIG_SPI_SAM_DMA_THRESHOLD || cfg->dma_dev == NULL) {
 		spi_sam_fast_rx(dev, regs, rx);
 	} else {
 		spi_sam_dma_txrx(dev, regs, NULL, rx);
@@ -483,7 +480,7 @@ static inline void spi_sam_tx(const struct device *dev,
 #ifdef CONFIG_SPI_SAM_DMA
 	const struct spi_sam_config *cfg = dev->config;
 
-	if (tx->len < SAM_SPI_DMA_THRESHOLD || cfg->dma_dev == NULL) {
+	if (tx->len < CONFIG_SPI_SAM_DMA_THRESHOLD || cfg->dma_dev == NULL) {
 		spi_sam_fast_tx(dev, regs, tx);
 	} else {
 		spi_sam_dma_txrx(dev, regs, tx, NULL);
@@ -502,7 +499,7 @@ static inline void spi_sam_txrx(const struct device *dev,
 #ifdef CONFIG_SPI_SAM_DMA
 	const struct spi_sam_config *cfg = dev->config;
 
-	if (tx->len < SAM_SPI_DMA_THRESHOLD || cfg->dma_dev == NULL) {
+	if (tx->len < CONFIG_SPI_SAM_DMA_THRESHOLD || cfg->dma_dev == NULL) {
 		spi_sam_fast_txrx(dev, regs, tx, rx);
 	} else {
 		spi_sam_dma_txrx(dev, regs, tx, rx);

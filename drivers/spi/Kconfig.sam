@@ -13,10 +13,19 @@ config SPI_SAM
 	  Enable support for the SAM SPI driver.
 
 if SPI_SAM
+
 config SPI_SAM_DMA
 	bool "SPI SAM DMA Support"
 	select DMA
 	help
 	  Enable using DMA with SPI for SPI instances that enable dma channels in
 	  their device tree node.
+
+config SPI_SAM_DMA_THRESHOLD
+	int "SPI SAM DMA Threshold"
+	default 32
+	depends on SPI_SAM_DMA
+	help
+	  Number of bytes in transfer before using DMA if available.
+
 endif # SPI_SAM
