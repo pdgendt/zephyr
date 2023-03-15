@@ -28,4 +28,10 @@ config SPI_SAM_DMA_THRESHOLD
 	help
 	  Number of bytes in transfer before using DMA if available.
 
+config SPI_SAM_INTERRUPT
+	bool "SPI SAM Interrupt Mode"
+	default y if SPI_ASYNC
+	help
+	  Enable SPI transfers using interrupts instead of blocking requests.
+
 endif # SPI_SAM

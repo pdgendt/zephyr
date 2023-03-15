@@ -35,31 +35,22 @@ struct spi_sam_config {
 	const uint32_t dma_rx_channel;
 	const uint32_t dma_rx_perid;
 #endif /* CONFIG_SPI_SAM_DMA */
+
+#ifdef CONFIG_SPI_SAM_INTERRUPT
+	void (*irq_config_func)(const struct device *dev);
+#endif /* CONFIG_SPI_SAM_INTERRUPT */
 };
 
 /* Device run time data */
 struct spi_sam_data {
 	struct spi_context ctx;
-	struct k_spinlock lock;
 
 #ifdef CONFIG_SPI_SAM_DMA
-	struct k_sem dma_sem;
+	uint32_t chunk_size;
 #endif /* CONFIG_SPI_SAM_DMA */
 };
 
-static inline k_spinlock_key_t spi_spin_lock(const struct device *dev)
-{
-	struct spi_sam_data *data = dev->data;
-
-	return k_spin_lock(&data->lock);
-}
-
-static inline void spi_spin_unlock(const struct device *dev, k_spinlock_key_t key)
-{
-	struct spi_sam_data *data = dev->data;
-
-	k_spin_unlock(&data->lock, key);
-}
+static void spi_sam_write(const struct device *dev);
 
 static int spi_slave_to_mr_pcs(int slave)
 {
@@ -136,6 +127,7 @@ static int spi_sam_configure(const struct device *dev,
 	spi_csr |= SPI_CSR_SCBR(div);
 
 	regs->SPI_CR = SPI_CR_SPIDIS; /* Disable SPI */
+	regs->SPI_CR = SPI_CR_SWRST; /* Reset SPI */
 	regs->SPI_MR = spi_mr;
 	regs->SPI_CSR[config->slave] = spi_csr;
 	regs->SPI_CR = SPI_CR_SPIEN; /* Enable SPI */
@@ -145,116 +137,19 @@ static int spi_sam_configure(const struct device *dev,
 	return 0;
 }
 
-static bool spi_sam_transfer_ongoing(struct spi_sam_data *data)
+#if defined(CONFIG_SPI_SAM_DMA) || defined(CONFIG_SPI_SAM_INTERRUPT)
+static void spi_sam_next_transfer(const struct device *dev)
 {
-	return spi_context_tx_on(&data->ctx) || spi_context_rx_on(&data->ctx);
-}
+	struct spi_sam_data *data = dev->data;
 
-static void spi_sam_shift_master(Spi *regs, struct spi_sam_data *data)
-{
-	uint8_t tx;
-	uint8_t rx;
-
-	if (spi_context_tx_buf_on(&data->ctx)) {
-		tx = *(uint8_t *)(data->ctx.tx_buf);
+	if (spi_context_tx_on(&data->ctx) || spi_context_rx_on(&data->ctx)) {
+		spi_sam_write(dev);
 	} else {
-		tx = 0U;
-	}
-
-	while ((regs->SPI_SR & SPI_SR_TDRE) == 0) {
-	}
-
-	regs->SPI_TDR = SPI_TDR_TD(tx);
-	spi_context_update_tx(&data->ctx, 1, 1);
-
-	while ((regs->SPI_SR & SPI_SR_RDRF) == 0) {
-	}
-
-	rx = (uint8_t)regs->SPI_RDR;
-
-	if (spi_context_rx_buf_on(&data->ctx)) {
-		*data->ctx.rx_buf = rx;
-	}
-	spi_context_update_rx(&data->ctx, 1, 1);
-}
-
-/* Finish any ongoing writes and drop any remaining read data */
-static void spi_sam_finish(Spi *regs)
-{
-	while ((regs->SPI_SR & SPI_SR_TXEMPTY) == 0) {
-	}
-
-	while (regs->SPI_SR & SPI_SR_RDRF) {
-		(void)regs->SPI_RDR;
+		spi_context_cs_control(&data->ctx, false);
+		spi_context_complete(&data->ctx, dev, 0);
 	}
 }
-
-/* Fast path that transmits a buf */
-static void spi_sam_fast_tx(const struct device *dev, Spi *regs, const struct spi_buf *tx_buf)
-{
-	k_spinlock_key_t key = spi_spin_lock(dev);
-
-	const uint8_t *p = tx_buf->buf;
-	const uint8_t *pend = (uint8_t *)tx_buf->buf + tx_buf->len;
-	uint8_t ch;
-
-	while (p != pend) {
-		ch = *p++;
-
-		while ((regs->SPI_SR & SPI_SR_TDRE) == 0) {
-		}
-
-		regs->SPI_TDR = SPI_TDR_TD(ch);
-	}
-
-	spi_sam_finish(regs);
-
-	spi_spin_unlock(dev, key);
-}
-
-/* Fast path that reads into a buf */
-static void spi_sam_fast_rx(const struct device *dev, Spi *regs, const struct spi_buf *rx_buf)
-{
-	k_spinlock_key_t key = spi_spin_lock(dev);
-
-	uint8_t *rx = rx_buf->buf;
-	int len = rx_buf->len;
-
-	if (len <= 0) {
-		return;
-	}
-
-	/* See the comment in spi_sam_fast_txrx re: interleaving. */
-
-	/* Write the first byte */
-	regs->SPI_TDR = SPI_TDR_TD(0);
-	len--;
-
-	while (len) {
-		while ((regs->SPI_SR & SPI_SR_TDRE) == 0) {
-		}
-
-		/* Load byte N+1 into the transmit register */
-		regs->SPI_TDR = SPI_TDR_TD(0);
-		len--;
-
-		/* Read byte N+0 from the receive register */
-		while ((regs->SPI_SR & SPI_SR_RDRF) == 0) {
-		}
-
-		*rx++ = (uint8_t)regs->SPI_RDR;
-	}
-
-	/* Read the final incoming byte */
-	while ((regs->SPI_SR & SPI_SR_RDRF) == 0) {
-	}
-
-	*rx = (uint8_t)regs->SPI_RDR;
-
-	spi_sam_finish(regs);
-
-	spi_spin_unlock(dev, key);
-}
+#endif /* CONFIG_SPI_SAM_DMA || CONFIG_SPI_SAM_INTERRUPT */
 
 #ifdef CONFIG_SPI_SAM_DMA
 
@@ -264,35 +159,30 @@ static uint8_t rx_dummy;
 static void dma_callback(const struct device *dma_dev, void *user_data,
 	uint32_t channel, int status)
 {
+	const struct device *spi_dev = (const struct device *)user_data;
+	struct spi_sam_data *data = spi_dev->data;
+
 	ARG_UNUSED(dma_dev);
 	ARG_UNUSED(channel);
-	ARG_UNUSED(status);
 
-	struct k_sem *sem = user_data;
+	if (status != 0) {
+		spi_context_cs_control(&data->ctx, false);
+		spi_context_complete(&data->ctx, spi_dev, status);
+	}
 
-	k_sem_give(sem);
+	spi_context_update_tx(&data->ctx, 1, data->chunk_size);
+	spi_context_update_rx(&data->ctx, 1, data->chunk_size);
+
+	spi_sam_next_transfer(spi_dev);
 }
 
-
 /* DMA transceive path */
-static int spi_sam_dma_txrx(const struct device *dev,
-			    Spi *regs,
-			    const struct spi_buf *tx_buf,
-			    const struct spi_buf *rx_buf)
+static int spi_sam_dma_txrx(const struct device *dev)
 {
 	const struct spi_sam_config *drv_cfg = dev->config;
 	struct spi_sam_data *drv_data = dev->data;
-
+	Spi *regs = drv_cfg->regs;
 	int res = 0;
-
-	__ASSERT_NO_MSG(rx_buf != NULL || tx_buf != NULL);
-
-	/* If rx and tx are non-null, they must be the same length */
-	if (rx_buf != NULL && tx_buf != NULL) {
-		__ASSERT(tx_buf->len == rx_buf->len, "TX RX buffer lengths must match");
-	}
-
-	uint32_t len = tx_buf != NULL ? tx_buf->len : rx_buf->len;
 
 	struct dma_config rx_dma_cfg = {
 		.source_data_size = 1,
@@ -305,13 +195,13 @@ static int spi_sam_dma_txrx(const struct device *dev,
 		.complete_callback_en = true,
 		.error_callback_en = true,
 		.dma_callback = dma_callback,
-		.user_data = &drv_data->dma_sem,
+		.user_data = (void *)&dev,
 	};
 
 	uint32_t dest_address, dest_addr_adjust;
 
-	if (rx_buf != NULL) {
-		dest_address = (uint32_t)rx_buf->buf;
+	if (spi_context_rx_buf_on(&drv_data->ctx)) {
+		dest_address = (uint32_t)drv_data->ctx.rx_buf;
 		dest_addr_adjust = DMA_ADDR_ADJ_INCREMENT;
 	} else {
 		dest_address = (uint32_t)&rx_dummy;
@@ -320,7 +210,7 @@ static int spi_sam_dma_txrx(const struct device *dev,
 
 	struct dma_block_config rx_block_cfg = {
 		.dest_addr_adj = dest_addr_adjust,
-		.block_size = len,
+		.block_size = drv_data->chunk_size,
 		.source_address = (uint32_t)&regs->SPI_RDR,
 		.dest_address = dest_address
 	};
@@ -338,13 +228,13 @@ static int spi_sam_dma_txrx(const struct device *dev,
 		.complete_callback_en = true,
 		.error_callback_en = true,
 		.dma_callback = dma_callback,
-		.user_data = &drv_data->dma_sem,
+		.user_data = (void *)&dev,
 	};
 
 	uint32_t source_address, source_addr_adjust;
 
-	if (tx_buf != NULL) {
-		source_address = (uint32_t)tx_buf->buf;
+	if (spi_context_tx_buf_on(&drv_data->ctx)) {
+		source_address = (uint32_t)drv_data->ctx.tx_buf;
 		source_addr_adjust = DMA_ADDR_ADJ_INCREMENT;
 	} else {
 		source_address = (uint32_t)&tx_dummy;
@@ -353,7 +243,7 @@ static int spi_sam_dma_txrx(const struct device *dev,
 
 	struct dma_block_config tx_block_cfg = {
 		.source_addr_adj = source_addr_adjust,
-		.block_size = len,
+		.block_size = drv_data->chunk_size,
 		.source_address = source_address,
 		.dest_address = (uint32_t)&regs->SPI_TDR
 	};
@@ -385,231 +275,79 @@ static int spi_sam_dma_txrx(const struct device *dev,
 		dma_stop(drv_cfg->dma_dev, drv_cfg->dma_rx_channel);
 	}
 
-	for (int i = 0; i < 2; i++) {
-		k_sem_take(&drv_data->dma_sem, K_FOREVER);
-	}
-
-	spi_sam_finish(regs);
-
 out:
 	return res;
 }
 
 #endif /* CONFIG_SPI_SAM_DMA */
 
-
-/* Fast path that writes and reads bufs of the same length */
-static void spi_sam_fast_txrx(const struct device *dev, Spi *regs, const struct spi_buf *tx_buf,
-			      const struct spi_buf *rx_buf)
-{
-	k_spinlock_key_t key = spi_spin_lock(dev);
-
-	const uint8_t *tx = tx_buf->buf;
-	const uint8_t *txend = (uint8_t *)tx_buf->buf + tx_buf->len;
-	uint8_t *rx = rx_buf->buf;
-	size_t len = rx_buf->len;
-
-	if (len == 0) {
-		return;
-	}
-
-	/*
-	 * The code below interleaves the transmit writes with the
-	 * receive reads to keep the bus fully utilised.  The code is
-	 * equivalent to:
-	 *
-	 * Transmit byte 0
-	 * Loop:
-	 * - Transmit byte n+1
-	 * - Receive byte n
-	 * Receive the final byte
-	 */
-
-	/* Write the first byte */
-	regs->SPI_TDR = SPI_TDR_TD(*tx++);
-
-	while (tx != txend) {
-		while ((regs->SPI_SR & SPI_SR_TDRE) == 0) {
-		}
-
-		/* Load byte N+1 into the transmit register.  TX is
-		 * single buffered and we have at most one byte in
-		 * flight so skip the DRE check.
-		 */
-		regs->SPI_TDR = SPI_TDR_TD(*tx++);
-
-		/* Read byte N+0 from the receive register */
-		while ((regs->SPI_SR & SPI_SR_RDRF) == 0) {
-		}
-
-		*rx++ = (uint8_t)regs->SPI_RDR;
-	}
-
-	/* Read the final incoming byte */
-	while ((regs->SPI_SR & SPI_SR_RDRF) == 0) {
-	}
-
-	*rx = (uint8_t)regs->SPI_RDR;
-
-	spi_sam_finish(regs);
-
-	spi_spin_unlock(dev, key);
-}
-
-static inline void spi_sam_rx(const struct device *dev,
-			      Spi *regs,
-			      const struct spi_buf *rx)
-{
-#ifdef CONFIG_SPI_SAM_DMA
-	const struct spi_sam_config *cfg = dev->config;
-
-	if (rx->len < CONFIG_SPI_SAM_DMA_THRESHOLD || cfg->dma_dev == NULL) {
-		spi_sam_fast_rx(dev, regs, rx);
-	} else {
-		spi_sam_dma_txrx(dev, regs, NULL, rx);
-	}
-#else
-	spi_sam_fast_rx(dev, regs, rx);
-#endif
-}
-
-static inline void spi_sam_tx(const struct device *dev,
-			      Spi *regs,
-			      const struct spi_buf *tx)
-{
-#ifdef CONFIG_SPI_SAM_DMA
-	const struct spi_sam_config *cfg = dev->config;
-
-	if (tx->len < CONFIG_SPI_SAM_DMA_THRESHOLD || cfg->dma_dev == NULL) {
-		spi_sam_fast_tx(dev, regs, tx);
-	} else {
-		spi_sam_dma_txrx(dev, regs, tx, NULL);
-	}
-#else
-	spi_sam_fast_tx(dev, regs, tx);
-#endif
-}
-
-
-static inline void spi_sam_txrx(const struct device *dev,
-				Spi *regs,
-				const struct spi_buf *tx,
-				const struct spi_buf *rx)
-{
-#ifdef CONFIG_SPI_SAM_DMA
-	const struct spi_sam_config *cfg = dev->config;
-
-	if (tx->len < CONFIG_SPI_SAM_DMA_THRESHOLD || cfg->dma_dev == NULL) {
-		spi_sam_fast_txrx(dev, regs, tx, rx);
-	} else {
-		spi_sam_dma_txrx(dev, regs, tx, rx);
-	}
-#else
-	spi_sam_fast_txrx(dev, regs, tx, rx);
-#endif
-}
-
-/* Fast path where every overlapping tx and rx buffer is the same length */
-static void spi_sam_fast_transceive(const struct device *dev,
-				    const struct spi_config *config,
-				    const struct spi_buf_set *tx_bufs,
-				    const struct spi_buf_set *rx_bufs)
+static void spi_sam_write(const struct device *dev)
 {
 	const struct spi_sam_config *cfg = dev->config;
-	size_t tx_count = 0;
-	size_t rx_count = 0;
+	struct spi_sam_data *data = dev->data;
 	Spi *regs = cfg->regs;
-	const struct spi_buf *tx = NULL;
-	const struct spi_buf *rx = NULL;
+	struct spi_context *ctx = &data->ctx;
 
-	if (tx_bufs) {
-		tx = tx_bufs->buffers;
-		tx_count = tx_bufs->count;
-	}
+#ifdef CONFIG_SPI_SAM_DMA
+	data->chunk_size = spi_context_max_continuous_chunk(ctx);
 
-	if (rx_bufs) {
-		rx = rx_bufs->buffers;
-		rx_count = rx_bufs->count;
-	}
+	if (cfg->dma_dev != NULL && data->chunk_size >= CONFIG_SPI_SAM_DMA_THRESHOLD) {
+		/* Disable read interrupt */
+		regs->SPI_IDR = SPI_IDR_RDRF;
 
-	while (tx_count != 0 && rx_count != 0) {
-		if (tx->buf == NULL) {
-			spi_sam_rx(dev, regs, rx);
-		} else if (rx->buf == NULL) {
-			spi_sam_tx(dev, regs, tx);
+		spi_sam_dma_txrx(dev);
+	} else
+#endif /* CONFIG_SPI_SAM_DMA */
+#ifdef CONFIG_SPI_SAM_INTERRUPT
+	{
+		uint8_t tx;
+
+		if (spi_context_tx_buf_on(ctx)) {
+			tx = *(uint8_t *)(data->ctx.tx_buf);
 		} else {
-			spi_sam_txrx(dev, regs, tx, rx);
+			tx = 0U;
 		}
 
-		tx++;
-		tx_count--;
-		rx++;
-		rx_count--;
-	}
+		/* Enable read interrupt */
+		regs->SPI_IER = SPI_IER_RDRF;
 
-	for (; tx_count != 0; tx_count--) {
-		spi_sam_tx(dev, regs, tx++);
+		regs->SPI_TDR = SPI_TDR_TD(tx);
+		spi_context_update_tx(ctx, 1, 1);
 	}
+#else
+	{
 
-	for (; rx_count != 0; rx_count--) {
-		spi_sam_rx(dev, regs, rx++);
 	}
+#endif /* CONFIG_SPI_SAM_INTERRUPT */
 }
 
-/* Returns true if the request is suitable for the fast
- * path. Specifically, the bufs are a sequence of:
- *
- * - Zero or more RX and TX buf pairs where each is the same length.
- * - Zero or more trailing RX only bufs
- * - Zero or more trailing TX only bufs
- */
-static bool spi_sam_is_regular(const struct spi_buf_set *tx_bufs,
-			       const struct spi_buf_set *rx_bufs)
+static void spi_sam_read(const struct device *dev)
 {
-	const struct spi_buf *tx = NULL;
-	const struct spi_buf *rx = NULL;
-	size_t tx_count = 0;
-	size_t rx_count = 0;
+	const struct spi_sam_config *cfg = dev->config;
+	struct spi_sam_data *data = dev->data;
+	Spi *regs = cfg->regs;
+	uint8_t rx;
 
-	if (tx_bufs) {
-		tx = tx_bufs->buffers;
-		tx_count = tx_bufs->count;
+	rx = regs->SPI_RDR;
+	if (spi_context_rx_buf_on(&data->ctx)) {
+		*data->ctx.rx_buf = rx;
 	}
 
-	if (rx_bufs) {
-		rx = rx_bufs->buffers;
-		rx_count = rx_bufs->count;
-	}
-
-	if (!tx || !rx) {
-		return true;
-	}
-
-	while (tx_count != 0 && rx_count != 0) {
-		if (tx->len != rx->len) {
-			return false;
-		}
-
-		tx++;
-		tx_count--;
-		rx++;
-		rx_count--;
-	}
-
-	return true;
+	spi_context_update_rx(&data->ctx, 1, 1);
 }
 
 static int spi_sam_transceive(const struct device *dev,
 			      const struct spi_config *config,
 			      const struct spi_buf_set *tx_bufs,
-			      const struct spi_buf_set *rx_bufs)
+			      const struct spi_buf_set *rx_bufs,
+			      bool asynchronous,
+			      spi_callback_t cb,
+			      void *userdata)
 {
-	const struct spi_sam_config *cfg = dev->config;
 	struct spi_sam_data *data = dev->data;
-	Spi *regs = cfg->regs;
 	int err;
 
-	spi_context_lock(&data->ctx, false, NULL, NULL, config);
+	spi_context_lock(&data->ctx, asynchronous, cb, userdata, config);
 
 	err = spi_sam_configure(dev, config);
 	if (err != 0) {
@@ -618,46 +356,38 @@ static int spi_sam_transceive(const struct device *dev,
 
 	spi_context_cs_control(&data->ctx, true);
 
-	/* This driver special cases the common send only, receive
-	 * only, and transmit then receive operations.	This special
-	 * casing is 4x faster than the spi_context() routines
-	 * and allows the transmit and receive to be interleaved.
-	 */
-	if (spi_sam_is_regular(tx_bufs, rx_bufs)) {
-		spi_sam_fast_transceive(dev, config, tx_bufs, rx_bufs);
-	} else {
-		spi_context_buffers_setup(&data->ctx, tx_bufs, rx_bufs, 1);
+	spi_context_buffers_setup(&data->ctx, tx_bufs, rx_bufs, 1);
 
-		do {
-			spi_sam_shift_master(regs, data);
-		} while (spi_sam_transfer_ongoing(data));
-	}
+	spi_sam_write(dev);
 
-	spi_context_cs_control(&data->ctx, false);
-
+	err = spi_context_wait_for_completion(&data->ctx);
 done:
 	spi_context_release(&data->ctx, err);
+
 	return err;
 }
 
 static int spi_sam_transceive_sync(const struct device *dev,
-				    const struct spi_config *config,
-				    const struct spi_buf_set *tx_bufs,
-				    const struct spi_buf_set *rx_bufs)
+				   const struct spi_config *config,
+				   const struct spi_buf_set *tx_bufs,
+				   const struct spi_buf_set *rx_bufs)
 {
-	return spi_sam_transceive(dev, config, tx_bufs, rx_bufs);
+	return spi_sam_transceive(dev, config, tx_bufs, rx_bufs, false, NULL, NULL);
 }
 
 #ifdef CONFIG_SPI_ASYNC
 static int spi_sam_transceive_async(const struct device *dev,
-				     const struct spi_config *config,
-				     const struct spi_buf_set *tx_bufs,
-				     const struct spi_buf_set *rx_bufs,
-				     spi_callback_t cb,
-				     void *userdata)
+				    const struct spi_config *config,
+				    const struct spi_buf_set *tx_bufs,
+				    const struct spi_buf_set *rx_bufs,
+				    spi_callback_t cb,
+				    void *userdata)
 {
-	/* TODO: implement async transceive */
+#ifdef CONFIG_SPI_SAM_INTERRUPT
+	return spi_sam_transceive(dev, config, tx_bufs, rx_bufs, true, cb, userdata);
+#else
 	return -ENOTSUP;
+#endif
 }
 #endif /* CONFIG_SPI_ASYNC */
 
@@ -670,6 +400,20 @@ static int spi_sam_release(const struct device *dev,
 
 	return 0;
 }
+
+#ifdef CONFIG_SPI_SAM_INTERRUPT
+static void spi_sam_isr(const struct device *dev)
+{
+	const struct spi_sam_config *cfg = dev->config;
+	Spi *regs = cfg->regs;
+	uint32_t status = regs->SPI_SR;
+
+	if (status & SPI_SR_RDRF) {
+		spi_sam_read(dev);
+		spi_sam_next_transfer(dev);
+	}
+}
+#endif
 
 static int spi_sam_init(const struct device *dev)
 {
@@ -689,8 +433,8 @@ static int spi_sam_init(const struct device *dev)
 		return err;
 	}
 
-#ifdef CONFIG_SPI_SAM_DMA
-	k_sem_init(&data->dma_sem, 0, K_SEM_MAX_LIMIT);
+#ifdef CONFIG_SPI_SAM_INTERRUPT
+	cfg->irq_config_func(dev);
 #endif
 
 	spi_context_unlock_unconditionally(&data->ctx);
@@ -723,6 +467,19 @@ static const struct spi_driver_api spi_sam_driver_api = {
 #define SPI_SAM_USE_DMA(n) 0
 #endif
 
+#define SPI_INTERRUPT_DEFINE_FUNC(n)								\
+	static void spi_##n##_sam_config_func(const struct device *dev)				\
+	{											\
+		IRQ_CONNECT(DT_INST_IRQ_BY_IDX(n, 0, irq),					\
+			    DT_INST_IRQ_BY_IDX(n, 0, priority),					\
+			    spi_sam_isr,							\
+			    DEVICE_DT_INST_GET(n), 0);						\
+		irq_enable(DT_INST_IRQ_BY_IDX(n, 0, irq));					\
+	}
+
+#define SPI_INTERRUPT_INIT(n)									\
+	.irq_config_func = &spi_##n##_sam_config_func,
+
 #define SPI_SAM_DEFINE_CONFIG(n)								\
 	static const struct spi_sam_config spi_sam_config_##n = {				\
 		.regs = (Spi *)DT_INST_REG_ADDR(n),						\
@@ -730,9 +487,11 @@ static const struct spi_driver_api spi_sam_driver_api = {
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),					\
 		.loopback = DT_INST_PROP(n, loopback),						\
 		COND_CODE_1(SPI_SAM_USE_DMA(n), (SPI_DMA_INIT(n)), ())				\
+		COND_CODE_1(CONFIG_SPI_SAM_INTERRUPT, (SPI_INTERRUPT_INIT(n)), ())		\
 	}
 
 #define SPI_SAM_DEVICE_INIT(n)									\
+	COND_CODE_1(CONFIG_SPI_SAM_INTERRUPT, (SPI_INTERRUPT_DEFINE_FUNC(n)),())		\
 	PINCTRL_DT_INST_DEFINE(n);								\
 	SPI_SAM_DEFINE_CONFIG(n);								\
 	static struct spi_sam_data spi_sam_dev_data_##n = {					\
@@ -741,8 +500,8 @@ static const struct spi_driver_api spi_sam_driver_api = {
 		SPI_CONTEXT_CS_GPIOS_INITIALIZE(DT_DRV_INST(n), ctx)				\
 	};											\
 	DEVICE_DT_INST_DEFINE(n, &spi_sam_init, NULL,						\
-			    &spi_sam_dev_data_##n,						\
-			    &spi_sam_config_##n, POST_KERNEL,					\
-			    CONFIG_SPI_INIT_PRIORITY, &spi_sam_driver_api);
+			      &spi_sam_dev_data_##n,						\
+			      &spi_sam_config_##n, POST_KERNEL,					\
+			      CONFIG_SPI_INIT_PRIORITY, &spi_sam_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(SPI_SAM_DEVICE_INIT)
