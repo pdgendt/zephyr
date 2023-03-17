@@ -102,10 +102,13 @@ static int spi_complete_multiple(struct spi_dt_spec *spec)
 	rx_bufs[1].len = BUF2_SIZE;
 
 	int ret;
+	uint32_t ts;
 
 	LOG_INF("Start complete multiple");
 
+	ts = k_cycle_get_32();
 	ret = spi_transceive_dt(spec, &tx, &rx);
+	ts = k_cycle_get_32() - ts;
 	if (ret) {
 		LOG_ERR("Code %d", ret);
 		zassert_false(ret, "SPI transceive failed");
@@ -130,7 +133,7 @@ static int spi_complete_multiple(struct spi_dt_spec *spec)
 		return -1;
 	}
 
-	LOG_INF("Passed");
+	LOG_INF("Passed in %d cycles", ts);
 
 	return 0;
 }
@@ -159,10 +162,13 @@ static int spi_complete_loop(struct spi_dt_spec *spec)
 	};
 
 	int ret;
+	uint32_t ts;
 
 	LOG_INF("Start complete loop");
 
+	ts = k_cycle_get_32();
 	ret = spi_transceive_dt(spec, &tx, &rx);
+	ts = k_cycle_get_32() - ts;
 	if (ret) {
 		LOG_ERR("Code %d", ret);
 		zassert_false(ret, "SPI transceive failed");
@@ -178,7 +184,7 @@ static int spi_complete_loop(struct spi_dt_spec *spec)
 		return -1;
 	}
 
-	LOG_INF("Passed");
+	LOG_INF("Passed in %d cycles", ts);
 
 	return 0;
 }
@@ -214,10 +220,13 @@ static int spi_null_tx_buf(struct spi_dt_spec *spec)
 	};
 
 	int ret;
+	uint32_t ts;
 
 	LOG_INF("Start null tx");
 
+	ts = k_cycle_get_32();
 	ret = spi_transceive_dt(spec, &tx, &rx);
+	ts = k_cycle_get_32() - ts;
 	if (ret) {
 		LOG_ERR("Code %d", ret);
 		zassert_false(ret, "SPI transceive failed");
@@ -233,7 +242,7 @@ static int spi_null_tx_buf(struct spi_dt_spec *spec)
 		return -1;
 	}
 
-	LOG_INF("Passed");
+	LOG_INF("Passed in %d cycles", ts);
 
 	return 0;
 }
@@ -261,12 +270,15 @@ static int spi_rx_half_start(struct spi_dt_spec *spec)
 		.count = ARRAY_SIZE(rx_bufs)
 	};
 	int ret;
+	uint32_t ts;
 
 	LOG_INF("Start half start");
 
 	(void)memset(buffer_rx, 0, BUF_SIZE);
 
+	ts = k_cycle_get_32();
 	ret = spi_transceive_dt(spec, &tx, &rx);
+	ts = k_cycle_get_32() - ts;
 	if (ret) {
 		LOG_ERR("Code %d", ret);
 		zassert_false(ret, "SPI transceive failed");
@@ -282,7 +294,7 @@ static int spi_rx_half_start(struct spi_dt_spec *spec)
 		return -1;
 	}
 
-	LOG_INF("Passed");
+	LOG_INF("Passed in %d cycles", ts);
 
 	return 0;
 }
@@ -314,6 +326,7 @@ static int spi_rx_half_end(struct spi_dt_spec *spec)
 		.count = ARRAY_SIZE(rx_bufs)
 	};
 	int ret;
+	uint32_t ts;
 
 	if (IS_ENABLED(CONFIG_SPI_STM32_DMA)) {
 		LOG_INF("Skip half end");
@@ -324,7 +337,9 @@ static int spi_rx_half_end(struct spi_dt_spec *spec)
 
 	(void)memset(buffer_rx, 0, BUF_SIZE);
 
+	ts = k_cycle_get_32();
 	ret = spi_transceive_dt(spec, &tx, &rx);
+	ts = k_cycle_get_32() - ts;
 	if (ret) {
 		LOG_ERR("Code %d", ret);
 		zassert_false(ret, "SPI transceive failed");
@@ -340,7 +355,7 @@ static int spi_rx_half_end(struct spi_dt_spec *spec)
 		return -1;
 	}
 
-	LOG_INF("Passed");
+	LOG_INF("Passed in %d cycles", ts);
 
 	return 0;
 }
@@ -380,6 +395,7 @@ static int spi_rx_every_4(struct spi_dt_spec *spec)
 		.count = ARRAY_SIZE(rx_bufs)
 	};
 	int ret;
+	uint32_t ts;
 
 	if (IS_ENABLED(CONFIG_SPI_STM32_DMA)) {
 		LOG_INF("Skip every 4");
@@ -395,7 +411,9 @@ static int spi_rx_every_4(struct spi_dt_spec *spec)
 
 	(void)memset(buffer_rx, 0, BUF_SIZE);
 
+	ts = k_cycle_get_32();
 	ret = spi_transceive_dt(spec, &tx, &rx);
+	ts = k_cycle_get_32() - ts;
 	if (ret) {
 		LOG_ERR("Code %d", ret);
 		zassert_false(ret, "SPI transceive failed");
@@ -418,7 +436,7 @@ static int spi_rx_every_4(struct spi_dt_spec *spec)
 		return -1;
 	}
 
-	LOG_INF("Passed");
+	LOG_INF("Passed in %d cycles", ts);
 
 	return 0;
 }
@@ -477,9 +495,11 @@ static int spi_async_call(struct spi_dt_spec *spec)
 		.count = ARRAY_SIZE(rx_bufs)
 	};
 	int ret;
+	uint32_t ts;
 
 	LOG_INF("Start async call");
 
+	ts = k_cycle_get_32();
 	ret = spi_transceive_signal(spec->bus, &spec->config, &tx, &rx, &async_sig);
 	if (ret == -ENOTSUP) {
 		LOG_DBG("Not supported");
@@ -493,6 +513,7 @@ static int spi_async_call(struct spi_dt_spec *spec)
 	}
 
 	k_sem_take(&caller, K_FOREVER);
+	ts = k_cycle_get_32() - ts;
 
 	if (result) {
 		LOG_ERR("Call code %d", ret);
@@ -500,7 +521,7 @@ static int spi_async_call(struct spi_dt_spec *spec)
 		return -1;
 	}
 
-	LOG_INF("Passed");
+	LOG_INF("Passed in %d cycles", ts);
 
 	return 0;
 }
