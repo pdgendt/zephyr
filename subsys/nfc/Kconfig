@@ -1,0 +1,10 @@
+# NFC Subsystem configuration options
+
+# Copyright (c) 2023 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+menu "Near Field Communication (NFC) subsystem [EXPERIMENTAL]"
+
+source "subsys/nfc/Kconfig.iso14443"
+
+endmenu

@@ -1,0 +1,134 @@
+# NFC ISO14443 configuration options
+
+# Copyright (c) 2023 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig NFC_ISO14443
+	bool "NFC ISO/IEC 14443"
+	select EXPERIMENTAL
+	help
+	  Configuration options for ISO/IEC 14443.
+
+if NFC_ISO14443
+
+module = NFC_ISO14443
+module-str = NFC_ISO14443
+source "subsys/logging/Kconfig.template.log_config"
+
+config NFC_ISO14443A
+	bool "NFC ISO/IEC 14443 Type A"
+	default y
+	help
+	  Enable ISO/IEC 14443 Type A support for NFC.
+
+choice NFC_ISO14443_FSC
+	prompt "Type 4A Tag Maximum Frame Size in Listen Mode"
+	default NFC_ISO14443_FSC_32
+	help
+	  The FSC defines the maximum size of a frame accepted
+	  by the NFC Forum Device in Listen Mode. FSC is expressed
+	  in number of data bytes included in the frame.
+
+config NFC_ISO14443_FSC_16
+	bool "FSC 16"
+config NFC_ISO14443_FSC_24
+	bool "FSC 24"
+config NFC_ISO14443_FSC_32
+	bool "FSC 32"
+config NFC_ISO14443_FSC_40
+	bool "FSC 40"
+config NFC_ISO14443_FSC_48
+	bool "FSC 48"
+config NFC_ISO14443_FSC_64
+	bool "FSC 64"
+config NFC_ISO14443_FSC_96
+	bool "FSC 96"
+config NFC_ISO14443_FSC_128
+	bool "FSC 128"
+config NFC_ISO14443_FSC_256
+	bool "FSC 256"
+
+endchoice # NFC_ISO14443_FSC
+
+config NFC_ISO14443_FSC_MAX
+	int
+	default 16 if NFC_ISO14443_FSC_16
+	default 24 if NFC_ISO14443_FSC_24
+	default 32 if NFC_ISO14443_FSC_32
+	default 40 if NFC_ISO14443_FSC_40
+	default 48 if NFC_ISO14443_FSC_48
+	default 64 if NFC_ISO14443_FSC_64
+	default 96 if NFC_ISO14443_FSC_96
+	default 128 if NFC_ISO14443_FSC_128
+	default 256 if NFC_ISO14443_FSC_256
+
+config NFC_ISO14443_FSCI
+	hex
+	default 0x00 if NFC_ISO14443_FSC_16
+	default 0x01 if NFC_ISO14443_FSC_24
+	default 0x02 if NFC_ISO14443_FSC_32
+	default 0x03 if NFC_ISO14443_FSC_40
+	default 0x04 if NFC_ISO14443_FSC_48
+	default 0x05 if NFC_ISO14443_FSC_64
+	default 0x06 if NFC_ISO14443_FSC_96
+	default 0x07 if NFC_ISO14443_FSC_128
+	default 0x08 if NFC_ISO14443_FSC_256
+	help
+	  Frame Size for proximity Card Integer in Listen Mode
+
+choice NFC_ISO14443_FSD
+	prompt "Type 4A Tag Maximum Frame Size in Poll Mode"
+	default NFC_ISO14443_FSD_24
+	help
+	  The FSD defines the maximum size of a frame that the NFC Forum Device
+	  in Poll Mode is able to receive. FSD is expressed in number of data bytes
+	  included in the frame.
+
+config NFC_ISO14443_FSD_16
+	bool "FSC 16"
+config NFC_ISO14443_FSD_24
+	bool "FSC 24"
+config NFC_ISO14443_FSD_32
+	bool "FSC 32"
+config NFC_ISO14443_FSD_40
+	bool "FSC 40"
+config NFC_ISO14443_FSD_48
+	bool "FSC 48"
+config NFC_ISO14443_FSD_64
+	bool "FSC 64"
+config NFC_ISO14443_FSD_96
+	bool "FSC 96"
+config NFC_ISO14443_FSD_128
+	bool "FSC 128"
+config NFC_ISO14443_FSD_256
+	bool "FSC 256"
+
+endchoice # NFC_ISO14443_FSD
+
+config NFC_ISO14443_FSD_MAX
+	int
+	default 16 if NFC_ISO14443_FSD_16
+	default 24 if NFC_ISO14443_FSD_24
+	default 32 if NFC_ISO14443_FSD_32
+	default 40 if NFC_ISO14443_FSD_40
+	default 48 if NFC_ISO14443_FSD_48
+	default 64 if NFC_ISO14443_FSD_64
+	default 96 if NFC_ISO14443_FSD_96
+	default 128 if NFC_ISO14443_FSD_128
+	default 256 if NFC_ISO14443_FSD_256
+
+config NFC_ISO14443_FSDI
+	hex
+	default 0x00 if NFC_ISO14443_FSD_16
+	default 0x10 if NFC_ISO14443_FSD_24
+	default 0x20 if NFC_ISO14443_FSD_32
+	default 0x30 if NFC_ISO14443_FSD_40
+	default 0x40 if NFC_ISO14443_FSD_48
+	default 0x50 if NFC_ISO14443_FSD_64
+	default 0x60 if NFC_ISO14443_FSD_96
+	default 0x70 if NFC_ISO14443_FSD_128
+	default 0x80 if NFC_ISO14443_FSD_256
+	help
+	  Frame Size for proximity Card Integer in Poll Mode
+
+endif # NFC_ISO14443
