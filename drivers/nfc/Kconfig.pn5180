@@ -1,0 +1,13 @@
+# NXP PN5180 NFC HCI driver configuration options
+#
+# Copyright (c) 2023 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig NFC_PN5180
+	bool "NXP PN5180"
+	default y
+	depends on DT_HAS_NXP_PN5180_ENABLED
+	select GPIO
+        select SPI
+	help
+	  Enable NXP PN5180 NFC HCI driver.

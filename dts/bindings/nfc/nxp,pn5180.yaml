@@ -1,0 +1,28 @@
+# Copyright (c) 2023 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+description: NXP PN5180 NFC Controller on SPI bus
+
+compatible: "nxp,pn5180"
+
+include: [nfc-controller.yaml, spi-device.yaml]
+
+properties:
+  busy-gpios:
+    type: phandle-array
+    required: true
+    description: |
+      The BUSY line is used to indicate that the system is
+      processing data and cannot receive any data from a host.
+
+  irq-gpios:
+    type: phandle-array
+    required: true
+    description: |
+      The IRQ_ENABLE configures, which of the interrupts are
+      routed to the IRQ pin of the PN5180. All of the interrupts
+      can be enabled and disabled independent from each other.
+
+  reset-gpios:
+    type: phandle-array
+    description: GPIO for reset

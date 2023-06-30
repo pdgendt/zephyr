@@ -1,0 +1,29 @@
+# NFC configuration options
+#
+# Copyright (c) 2023 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+#
+# NFC options
+#
+menuconfig NFC
+	bool "Near Field Communication (NFC) drivers [EXPERIMENTAL]"
+	select EXPERIMENTAL
+	help
+	  Enable NFC Driver Configuration.
+
+if NFC
+
+module = NFC
+module-str = NFC
+source "subsys/logging/Kconfig.template.log_config"
+
+config NFC_INIT_PRIORITY
+	int "NFC driver init priority"
+	default 80
+	help
+	  NFC driver device initialization priority.
+
+source "drivers/nfc/Kconfig.pn5180"
+
+endif # NFC
