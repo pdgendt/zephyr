@@ -13,6 +13,7 @@
 #include <zephyr/shell/shell_fprintf.h>
 #include <zephyr/shell/shell_log_backend.h>
 #include <zephyr/shell/shell_string_conv.h>
+#include <zephyr/shell/shell_time.h>
 #include <zephyr/logging/log_instance.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/iterable_sections.h>

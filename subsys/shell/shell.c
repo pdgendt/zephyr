@@ -285,6 +285,11 @@ static bool tab_prepare(const struct shell *sh,
 		*argc = *argc - 1;
 	}
 
+	if (*argc > 0 && z_shell_time_request((*argv)[0])) {
+		*argv = *argv + 1;
+		*argc = *argc - 1;
+	}
+
 	/* If last command is not completed (followed by space) it is treated
 	 * as uncompleted one.
 	 */
@@ -636,6 +641,8 @@ static int execute(const struct shell *sh)
 	const char **argvp;
 	char *cmd_buf = sh->ctx->cmd_buff;
 	bool has_last_handler = false;
+	bool time_cmd = false;
+	int retv;
 
 	z_shell_op_cursor_end_move(sh);
 	if (!z_shell_cursor_in_empty_line(sh)) {
@@ -695,6 +702,15 @@ static int execute(const struct shell *sh)
 			z_shell_fprintf(sh, SHELL_ERROR,
 					SHELL_MSG_SPECIFY_SUBCOMMAND);
 			return -ENOEXEC;
+		}
+
+		/* If the first command is the time request, continue to the next */
+		if (argv == &argvp[parent != NULL ? 1 : 0] && z_shell_time_request(argvp[0])) {
+			time_cmd = true;
+
+			argvp++;
+			cmd_lvl++;
+			continue;
 		}
 
 		if (IS_ENABLED(CONFIG_SHELL_WILDCARD) && (cmd_lvl > 0)) {
@@ -796,9 +812,20 @@ static int execute(const struct shell *sh)
 		}
 	}
 
+	if (time_cmd) {
+		z_shell_time_start(sh);
+	}
+
 	/* Executing the deepest found handler. */
-	return exec_cmd(sh, cmd_lvl - cmd_with_handler_lvl,
+	retv = exec_cmd(sh, cmd_lvl - cmd_with_handler_lvl,
 			&argv[cmd_with_handler_lvl], &help_entry);
+
+	if (time_cmd) {
+		z_shell_time_stop(sh);
+		z_shell_op_word_remove(sh);
+	}
+
+	return retv;
 }
 
 static void tab_handle(const struct shell *sh)

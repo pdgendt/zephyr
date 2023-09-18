@@ -32,6 +32,11 @@ zephyr_sources_ifdef(
   )
 
 zephyr_sources_ifdef(
+  CONFIG_SHELL_TIME
+  shell_time.c
+  )
+
+zephyr_sources_ifdef(
   CONFIG_SHELL_WILDCARD
   shell_wildcard.c
   )

@@ -203,6 +203,13 @@ config SHELL_STATS
 	bool "Shell statistics"
 	default y if !SHELL_MINIMAL
 
+config SHELL_TIME
+	bool "Time command"
+	default y if !SHELL_MINIMAL
+	help
+	  This option enables the time command. It can be used to determine the
+	  duration of executing another shell command.
+
 config SHELL_CMDS
 	bool "Built-in commands"
 	default y if !SHELL_MINIMAL
