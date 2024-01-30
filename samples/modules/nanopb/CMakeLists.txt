@@ -8,6 +8,12 @@ project(nanopb_sample)
 list(APPEND CMAKE_MODULE_PATH ${ZEPHYR_BASE}/modules/nanopb)
 include(nanopb)
 
+if(CONFIG_SAMPLE_UNLUCKY_NUMBER)
+  set(skip_unlucky_number "false")
+else()
+  set(skip_unlucky_number "true")
+endif()
+
 zephyr_nanopb_sources(app src/simple.proto)
 
 FILE(GLOB app_sources src/*.c)
