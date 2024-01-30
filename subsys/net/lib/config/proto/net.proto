@@ -1,0 +1,30 @@
+/*
+ * Copyright (c) 2024 Basalte bv
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+syntax = "proto3"
+
+message Interface {
+	string name = 1;
+	IPv4Config ipv4_config = 2;
+	IPv6Config ipv6_config = 3;
+};
+
+message IPv4Config {
+	repeated string addresses = 1;
+	repeated string mcast_addresses = 2;
+	string gateway = 3;
+	uint32 netmask_length = 4;
+	uint32 ttl = 5;
+	uint32 mcast_ttl = 6;
+	bool dhcp = 7;
+	bool autoconf = 9;
+};
+
+message IPv6Config {
+	repeated string addresses = 1;
+	repeated string mcast_addresses = 2;
+	repeated IPv6Prefix prefixes = 3;
+};
