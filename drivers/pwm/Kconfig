@@ -56,6 +56,8 @@ source "drivers/pwm/Kconfig.sam"
 
 source "drivers/pwm/Kconfig.mcux"
 
+source "drivers/pwm/Kconfig.mcux_ipwm"
+
 source "drivers/pwm/Kconfig.mcux_sctimer"
 
 source "drivers/pwm/Kconfig.mcux_qtmr"

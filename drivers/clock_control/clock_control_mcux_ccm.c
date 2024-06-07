@@ -71,6 +71,21 @@ static const uint32_t lpuart_rate = MHZ(80);
 
 #endif /* CONFIG_UART_MCUX_LPUART */
 
+#ifdef CONFIG_PWM_MCUX_IPWM
+static const clock_root_control_t pwm_clk_root[] = {
+	kCLOCK_RootPwm1,
+	kCLOCK_RootPwm2,
+	kCLOCK_RootPwm3,
+	kCLOCK_RootPwm4,
+};
+
+static const clock_ip_name_t pwm_clocks[] = {
+	kCLOCK_Pwm1,
+	kCLOCK_Pwm2,
+	kCLOCK_Pwm3,
+	kCLOCK_Pwm4,
+};
+#endif
 
 static int mcux_ccm_on(const struct device *dev,
 			      clock_control_subsys_t sub_system)
@@ -112,6 +127,14 @@ static int mcux_ccm_on(const struct device *dev,
 		CLOCK_EnableClock(kCLOCK_Enet);
 		return 0;
 #endif
+#ifdef CONFIG_PWM_MCUX_IPWM
+	case IMX_CCM_PWM1_CLK:
+	case IMX_CCM_PWM2_CLK:
+	case IMX_CCM_PWM3_CLK:
+	case IMX_CCM_PWM4_CLK:
+		CLOCK_EnableClock(pwm_clocks[instance]);
+		return 0;
+#endif
 	default:
 		(void)instance;
 		return 0;
@@ -131,6 +154,14 @@ static int mcux_ccm_off(const struct device *dev,
 	case IMX_CCM_UART3_CLK:
 	case IMX_CCM_UART4_CLK:
 		CLOCK_DisableClock(uart_clocks[instance]);
+		return 0;
+#endif
+#ifdef CONFIG_PWM_MCUX_IPWM
+	case IMX_CCM_PWM1_CLK:
+	case IMX_CCM_PWM2_CLK:
+	case IMX_CCM_PWM3_CLK:
+	case IMX_CCM_PWM4_CLK:
+		CLOCK_DisableClock(pwm_clocks[instance]);
 		return 0;
 #endif
 	default:
@@ -406,6 +437,40 @@ static int mcux_ccm_get_subsys_rate(const struct device *dev,
 			(CLOCK_GetRootPostDivider(kCLOCK_RootEcspi3));
 		break;
 #endif /* CONFIG_SPI_MCUX_ECSPI */
+#ifdef CONFIG_PWM_MCUX_IPWM
+	case IMX_CCM_PWM1_CLK:
+	case IMX_CCM_PWM2_CLK:
+	case IMX_CCM_PWM3_CLK:
+	case IMX_CCM_PWM4_CLK:
+	{
+		uint32_t instance = clock_name & IMX_CCM_INSTANCE_MASK;
+		clock_root_control_t clk_root = pwm_clk_root[instance];
+		uint32_t pwm_mux = CLOCK_GetRootMux(clk_root);
+
+		if (pwm_mux == kCLOCK_PwmRootmuxOsc24M) {
+			*rate = MHZ(24);
+		} else if (pwm_mux == kCLOCK_PwmRootmuxSysPll2Div10) {
+			*rate = CLOCK_GetPllFreq(kCLOCK_SystemPll2Ctrl) /
+				(CLOCK_GetRootPreDivider(clk_root)) /
+				(CLOCK_GetRootPostDivider(clk_root)) /
+				10;
+		} else if (pwm_mux == kCLOCK_PwmRootmuxSysPll1Div5) {
+			*rate = CLOCK_GetPllFreq(kCLOCK_SystemPll1Ctrl) /
+				(CLOCK_GetRootPreDivider(clk_root)) /
+				(CLOCK_GetRootPostDivider(clk_root)) /
+				5;
+		} else if (pwm_mux == kCLOCK_PwmRootmuxSysPll1Div20) {
+			*rate = CLOCK_GetPllFreq(kCLOCK_SystemPll2Ctrl) /
+				(CLOCK_GetRootPreDivider(clk_root)) /
+				(CLOCK_GetRootPostDivider(clk_root)) /
+				20;
+		} else if (pwm_mux == kCLOCK_PwmRootmuxSystemPll3) {
+			*rate = CLOCK_GetPllFreq(kCLOCK_SystemPll3Ctrl) /
+				(CLOCK_GetRootPreDivider(clk_root)) /
+				(CLOCK_GetRootPostDivider(clk_root));
+		}
+	} break;
+#endif
 	}
 
 	return 0;

@@ -156,6 +156,33 @@ static void SOC_ClockInit(void)
 #endif
 #endif
 
+#ifdef CONFIG_PWM_MCUX_IPWM
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(pwm1), okay)
+	/* Set PWM1 source to SYSTEM PLL1 160MHZ */
+	CLOCK_SetRootMux(kCLOCK_RootPwm1, kCLOCK_PwmRootmuxSysPll1Div5);
+	/* Set root clock to 160MHZ / 2 = 80MHZ */
+	CLOCK_SetRootDivider(kCLOCK_RootPwm1, 2U, 1U);
+#endif
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(pwm2), okay)
+	/* Set PWM2 source to SYSTEM PLL1 160MHZ */
+	CLOCK_SetRootMux(kCLOCK_RootPwm2, kCLOCK_PwmRootmuxSysPll1Div5);
+	/* Set root clock to 160MHZ / 2 = 80MHZ */
+	CLOCK_SetRootDivider(kCLOCK_RootPwm2, 2U, 1U);
+#endif
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(pwm3), okay)
+	/* Set PWM3 source to SYSTEM PLL1 160MHZ */
+	CLOCK_SetRootMux(kCLOCK_RootPwm3, kCLOCK_PwmRootmuxSysPll1Div5);
+	/* Set root clock to 160MHZ / 2 = 80MHZ */
+	CLOCK_SetRootDivider(kCLOCK_RootPwm3, 2U, 1U);
+#endif
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(pwm4), okay)
+	/* Set PWM4 source to SYSTEM PLL1 160MHZ */
+	CLOCK_SetRootMux(kCLOCK_RootPwm4, kCLOCK_PwmRootmuxSysPll1Div5);
+	/* Set root clock to 160MHZ / 2 = 80MHZ */
+	CLOCK_SetRootDivider(kCLOCK_RootPwm4, 2U, 1U);
+#endif
+#endif /* CONFIG_PWM_MCUX_IPWM */
+
 	CLOCK_EnableClock(kCLOCK_Rdc);   /* Enable RDC clock */
 	CLOCK_EnableClock(kCLOCK_Ocram); /* Enable Ocram clock */
 

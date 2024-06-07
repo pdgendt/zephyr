@@ -1,0 +1,13 @@
+# NXP IPWM configuration options
+
+# Copyright (c) 2024 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+config PWM_MCUX_IPWM
+	bool "MCUX IPWM driver"
+	default y
+	depends on DT_HAS_NXP_IMX_IPWM_ENABLED
+	depends on CLOCK_CONTROL
+	select PINCTRL
+	help
+	  Enable the MCUX IPWM driver.
