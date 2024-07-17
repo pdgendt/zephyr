@@ -65,13 +65,15 @@ class AlwaysIfMissing(argparse.Action):
 
 class Build(Forceable):
 
-    def __init__(self):
+    def __init__(self, target: str | None = None):
         super(Build, self).__init__(
-            'build',
+            target if target else 'build',
             # Keep this in sync with the string in west-commands.yml.
             'compile a Zephyr application',
             BUILD_DESCRIPTION,
             accepts_unknown_args=True)
+
+        self.target = target
 
         self.source_dir = None
         '''Source directory for the build, or None on error.'''
@@ -119,7 +121,7 @@ class Build(Forceable):
         group.add_argument('--domain', action='append',
                            help='''execute build tool (make or ninja) only for
                            given domain''')
-        group.add_argument('-t', '--target',
+        group.add_argument('-t', '--target', default=self.target,
                            help='''run build system target TARGET
                            (try "-t usage")''')
         group.add_argument('-T', '--test-item',
@@ -662,3 +664,7 @@ class Build(Forceable):
             if add_dashes:
                 extra_args.append('--')
             extra_args.append('VERBOSE=1')
+
+class Run(Build):
+    def __init__(self):
+        super(Run, self).__init__('run')

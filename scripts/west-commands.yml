@@ -20,6 +20,9 @@ west-commands:
       - name: build
         class: Build
         help: compile a Zephyr application
+      - name: run
+        class: Run
+        help: alias for build --target run
   - file: scripts/west_commands/twister_cmd.py
     commands:
       - name: twister
