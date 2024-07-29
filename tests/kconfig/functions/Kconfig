@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2024 Basalte bv
+
+SYM_STRING := abcdefghijklmnopqrstuvwxyz
+
+config SYM_STRING
+	string
+	default "$(SYM_STRING)"
+
+config SYM_SUBSTRING_5
+	string
+	default "$(substring,$(SYM_STRING),5)"
+
+config SYM_SUBSTRING_10_15
+	string
+	default "$(substring,$(SYM_STRING),10,15)"
+
+source "Kconfig.zephyr"
