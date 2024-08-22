@@ -330,6 +330,14 @@ structure in the main Zephyr tree: boards/<vendor>/<board_name>/""")
                              " Valid options for 'lcov' tool are: " +
                              ','.join(supported_coverage_formats['lcov']) + " (html,lcov - default).")
 
+    parser.add_argument("--sca-variant", default=None,
+                        help="Enable Static Code Analysis to generate SCA report.")
+
+    parser.add_argument("--sca-platform", action="append", default=[],
+                        help="Platforms to generate SCA reports for. "
+                             "This option may be used multiple times. "
+                             "Default to what was selected with --platform.")
+
     parser.add_argument("--test-config", action="store", default=os.path.join(ZEPHYR_BASE, "tests", "test_config.yaml"),
         help="Path to file with plans and test configurations.")
 

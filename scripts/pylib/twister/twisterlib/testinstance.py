@@ -57,6 +57,7 @@ class TestInstance:
         self.execution_time = 0
         self.build_time = 0
         self.retries = 0
+        self.extra_args = []
 
         self.name = os.path.join(platform.name, testsuite.name)
         self.dut = None

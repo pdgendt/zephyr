@@ -1097,7 +1097,7 @@ class ProjectBuilder(FilterBuilder):
             self.testsuite.extra_conf_files,
             self.testsuite.extra_overlay_confs,
             self.testsuite.extra_dtc_overlay_files,
-            self.options.extra_args, # CMake extra args
+            self.instance.extra_args + self.options.extra_args, # CMake extra args
             self.instance.build_dir,
         )
         return self.run_cmake(args,filter_stages)
@@ -1189,7 +1189,7 @@ class TwisterRunner:
 
     def __init__(self, instances, suites, env=None) -> None:
         self.pipeline = None
-        self.options = env.options
+        self.options = env.options if env is not None else None
         self.env = env
         self.instances = instances
         self.suites = suites

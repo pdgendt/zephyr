@@ -20,6 +20,7 @@ from twisterlib.coverage import run_coverage
 from twisterlib.runner import TwisterRunner
 from twisterlib.environment import TwisterEnv
 from twisterlib.package import Artifacts
+from twisterlib.sca import setup_sca
 
 logger = logging.getLogger("twister")
 logger.setLevel(logging.DEBUG)
@@ -154,6 +155,9 @@ def main(options, default_options):
                         i.reason,
                     )
                 )
+
+    if options.sca_variant is not None:
+        setup_sca(tplan, env)
 
     report = Reporting(tplan, env)
     plan_file = os.path.join(options.outdir, "testplan.json")
