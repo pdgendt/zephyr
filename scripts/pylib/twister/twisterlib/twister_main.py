@@ -101,6 +101,7 @@ def main(options, default_options):
                          "or --clobber-output, or delete these directories manually.")
 
     previous_results_file = None
+    os.environ['TWISTER_OUTPUT_DIR'] = options.outdir
     os.makedirs(options.outdir, exist_ok=True)
     if options.last_metrics and previous_results:
         previous_results_file = os.path.join(options.outdir, "baseline.json")
