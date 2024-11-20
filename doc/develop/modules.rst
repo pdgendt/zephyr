@@ -1021,6 +1021,39 @@ maps, each of which has the following entries:
 - ``doc-url``: A URL pointing to the location of the official documentation for
   this blob
 
+Package manager dependencies
+============================
+
+Zephyr modules can describe dependencies available from package managers,
+currently only ``pip`` is supported.
+
+A west extension command ``west packages <manager>`` is available to list
+dependencies for Zephyr and present modules that leverage this feature in their
+``module.yml`` file.
+Run ``west help packages`` for more details.
+
+Python pip
+----------
+
+Calling ``west packages pip`` lists individual packages and `requirement files`_.
+Passing ``--install`` installs these if there's an active virtual environment.
+
+The following example demonstrates a ``zephyr/module.yml`` file with
+a single ``pytest`` package dependency and some requirement files for ``pip``.
+Typically a module will have either ``packages`` or ``requirement-files``
+listed, the snippet is for illustration purposes only.
+
+
+.. code-block:: yaml
+
+    package-managers:
+      pip:
+        packages:
+          - pytest
+        requirement-files:
+          - scripts/requirements-build.txt
+          - scripts/requirements-doc.txt
+
 Module Inclusion
 ================
 
@@ -1200,3 +1233,4 @@ revision needs to be changed to the commit hash from the module repository.
 .. _CMake list: https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#lists
 .. _add_subdirectory(): https://cmake.org/cmake/help/latest/command/add_subdirectory.html
 .. _GitHub issues: https://github.com/zephyrproject-rtos/zephyr/issues
+.. _requirement files: https://pip.pypa.io/en/stable/reference/requirements-file-format/
