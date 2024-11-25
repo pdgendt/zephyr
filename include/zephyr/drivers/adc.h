@@ -708,6 +708,11 @@ __subsystem struct adc_driver_api {
 	uint16_t ref_internal;	/* mV */
 };
 
+struct adc_device {
+	const struct device *dev;
+	const struct adc_driver_api *api;
+};
+
 /**
  * @brief Configure an ADC channel.
  *
@@ -730,6 +735,12 @@ static inline int z_impl_adc_channel_setup(const struct device *dev,
 				(const struct adc_driver_api *)dev->api;
 
 	return api->channel_setup(dev, channel_cfg);
+}
+
+static inline int adc_device_channel_setup(const struct adc_device *adc_dev,
+					   const struct adc_channel_cfg *channel_cfg)
+{
+	return adc_dev->api->channel_setup(adc_dev->dev, channel_cfg);
 }
 
 /**
