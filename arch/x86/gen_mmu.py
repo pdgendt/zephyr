@@ -65,20 +65,19 @@ to the end of the binary produced by this script, minus the size of the
 top-level paging structure as it is written out last.
 """
 
-import sys
-import array
 import argparse
+import array
 import ctypes
 import os
-import struct
 import re
+import struct
+import sys
 import textwrap
-
-from packaging import version
 
 import elftools
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
+from packaging import version
 
 if version.parse(elftools.__version__) < version.parse('0.24'):
     sys.exit("pyelftools is out of date, need version 0.24 or later")
@@ -133,9 +132,9 @@ def error(text):
 def align_check(base, size, scope=4096):
     """Make sure base and size are page-aligned"""
     if (base % scope) != 0:
-        error("unaligned base address %x" % base)
+        error(f"unaligned base address {base:x}")
     if (size % scope) != 0:
-        error("Unaligned region size 0x%x for base %x" % (size, base))
+        error(f"Unaligned region size 0x{size:x} for base {base:x}")
 
 
 def dump_flags(flags):
@@ -180,7 +179,7 @@ def round_down(val, align):
 # access or set caching properties at leaf levels.
 INT_FLAGS = FLAG_P | FLAG_RW | FLAG_US
 
-class MMUTable():
+class MMUTable:
     """Represents a particular table in a set of page tables, at any level"""
 
     def __init__(self):
@@ -257,9 +256,10 @@ class MMUTable():
         this is the physical address of the next level table"""
         index = self.entry_index(virt_addr)
 
-        verbose("%s: mapping 0x%x to 0x%x : %s" %
-                (self.__class__.__name__,
-                 phys_addr, virt_addr, dump_flags(entry_flags)))
+        verbose(
+            f"{self.__class__.__name__}: mapping 0x{phys_addr:x} to "
+            f"0x{virt_addr:x} : {dump_flags(entry_flags)}"
+        )
 
         self.entries[index] = ((phys_addr & self.addr_mask) |
                                (entry_flags & self.supported_flags))
@@ -270,9 +270,10 @@ class MMUTable():
         Unsupported flags will be filtered out."""
         index = self.entry_index(virt_addr)
 
-        verbose("%s: changing perm at 0x%x : %s" %
-                (self.__class__.__name__,
-                 virt_addr, dump_flags(entry_flags)))
+        verbose(
+            f"{self.__class__.__name__}: changing perm at "
+            f"0x{virt_addr:x} : {dump_flags(entry_flags)}"
+        )
 
         self.entries[index] = ((self.entries[index] & self.addr_mask) |
                                (entry_flags & self.supported_flags))
@@ -332,7 +333,7 @@ class PtXd(Pt):
                        FLAG_IGNORED0 | FLAG_IGNORED1 | FLAG_IGNORED2)
 
 
-class PtableSet():
+class PtableSet:
     """Represents a complete set of page tables for any paging mode"""
 
     def __init__(self, pages_start):
@@ -341,8 +342,7 @@ class PtableSet():
         self.toplevel = self.levels[0]()
         self.page_pos = pages_start
 
-        debug("%s starting at physical address 0x%x" %
-              (self.__class__.__name__, self.page_pos))
+        debug(f"{self.__class__.__name__} starting at physical address 0x{self.page_pos:x}")
 
         # Database of page table pages. Maps physical memory address to
         # MMUTable objects, excluding the top-level table which is tracked
@@ -404,8 +404,7 @@ class PtableSet():
         """Create a new child table"""
         new_table_addr = self.get_new_mmutable_addr()
         new_table = self.levels[depth]()
-        debug("new %s at physical addr 0x%x"
-                      % (self.levels[depth].__name__, new_table_addr))
+        debug(f"new {self.levels[depth].__name__} at physical addr 0x{new_table_addr:x}")
         self.tables[new_table_addr] = new_table
         table.map(virt_addr, new_table_addr, INT_FLAGS)
 
@@ -432,8 +431,7 @@ class PtableSet():
 
     def reserve(self, virt_base, size, to_level=PT_LEVEL):
         """Reserve page table space with already aligned virt_base and size"""
-        debug("Reserving paging structures for 0x%x (0x%x)" %
-              (virt_base, size))
+        debug(f"Reserving paging structures for 0x{virt_base:x} (0x{size:x})")
 
         align_check(virt_base, size)
 
@@ -441,8 +439,9 @@ class PtableSet():
         scope = 1 << self.levels[PD_LEVEL].addr_shift
 
         if virt_base % scope != 0:
-            error("misaligned virtual address space, 0x%x not a multiple of 0x%x" %
-                  (virt_base, scope))
+            error(
+                f"misaligned virtual address space, 0x{virt_base:x} not a multiple of 0x{scope:x}"
+            )
 
         for addr in range(virt_base, virt_base + size, scope):
             self.map_page(addr, 0, 0, True, to_level)
@@ -469,8 +468,7 @@ class PtableSet():
 
         scope = 1 << self.levels[level].addr_shift
 
-        debug("Mapping 0x%x (0x%x) to 0x%x: %s" %
-                (phys_base, size, virt_base, dump_flags(flags)))
+        debug(f"Mapping 0x{phys_base:x} (0x{size:x}) to 0x{virt_base:x}: {dump_flags(flags)}")
 
         align_check(phys_base, size, scope)
         align_check(virt_base, size, scope)
@@ -533,8 +531,7 @@ class PtableSet():
         if size == 0:
             return
 
-        debug("change flags for %s at 0x%x (0x%x): %s" %
-              (name, base, size, dump_flags(flags)))
+        debug(f"change flags for {name} at 0x{base:x} (0x{size:x}): {dump_flags(flags)}")
 
         num_levels = len(self.levels) + level + 1
         scope = 1 << self.levels[level].addr_shift
@@ -552,8 +549,7 @@ class PtableSet():
                     table = self.tables[table.lookup(addr)]
                 table.set_perms(addr, flags)
         except KeyError:
-            error("no mapping for %s region 0x%x (size 0x%x)" %
-                  (name, base, size))
+            error(f"no mapping for {name} region 0x{base:x} (size 0x{size:x})")
 
     def write_output(self, filename):
         """Write the page tables to the output file in binary format"""
@@ -570,9 +566,10 @@ class PtableSet():
             # in PAE, the top-level PDPT has only 4 entries and is not a
             # full page in size. We do not put it in the tables dictionary
             # and treat it as a special case.
-            debug("top-level %s at physical addr 0x%x" %
-                  (self.toplevel.__class__.__name__,
-                   self.get_new_mmutable_addr()))
+            debug(
+                f"top-level {self.toplevel.__class__.__name__} at physical addr "
+                f"0x{self.get_new_mmutable_addr():x}"
+            )
             top_level_bin = self.toplevel.get_binary()
             output_fp.write(top_level_bin)
             written_size += len(top_level_bin)
@@ -662,7 +659,7 @@ def map_extra_regions(pt):
         elements = entry.split(',')
 
         if len(elements) < 2:
-            error("Not enough arguments for --map %s" % entry)
+            error(f"Not enough arguments for --map {entry}")
 
         one_map = {}
 
@@ -677,7 +674,7 @@ def map_extra_regions(pt):
 
             # Check for allowed flags
             if not bool(re.match('^[LUWXD]*$', map_flags)):
-                error("Unrecognized flags: %s" % map_flags)
+                error(f"Unrecognized flags: {map_flags}")
 
             flags = FLAG_P | ENTRY_XD
             if 'W' in map_flags:
@@ -712,8 +709,8 @@ def map_extra_regions(pt):
         # Check if addresses have already been mapped.
         # Error out if so as they could override kernel mappings.
         if pt.is_region_mapped(virt, size, level):
-            error(("Region 0x%x (%d) already been mapped "
-                   "for --map %s" % (virt, size, one_map['cmdline'])))
+            error("Region 0x%x (%d) already been mapped "
+                   "for --map %s" % (virt, size, one_map['cmdline']))
 
         # Reserve space in page table, and map the region
         pt.reserve_unaligned(virt, size, level)
@@ -742,7 +739,7 @@ def main():
     else:
         pclass = Ptables32bit
 
-    debug("building %s" % pclass.__name__)
+    debug(f"building {pclass.__name__}")
 
     vm_base = syms["CONFIG_KERNEL_VM_BASE"]
     vm_size = syms["CONFIG_KERNEL_VM_SIZE"]
@@ -774,15 +771,17 @@ def main():
 
     ptables_phys = syms["z_x86_pagetables_start"] + virt_to_phys_offset
 
-    debug("Address space: 0x%x - 0x%x size 0x%x" %
-          (vm_base, vm_base + vm_size - 1, vm_size))
+    debug(f"Address space: 0x{vm_base:x} - 0x{vm_base + vm_size - 1:x} size 0x{vm_size:x}")
 
-    debug("Zephyr image: 0x%x - 0x%x size 0x%x" %
-          (image_base, image_base + image_size - 1, image_size))
+    debug(
+        f"Zephyr image: 0x{image_base:x} - 0x{image_base + image_size - 1:x} size 0x{image_size:x}"
+    )
 
     if virt_to_phys_offset != 0:
-        debug("Physical address space: 0x%x - 0x%x size 0x%x" %
-              (sram_base, sram_base + sram_size - 1, sram_size))
+        debug(
+            f"Physical address space: 0x{sram_base:x} - 0x{sram_base + sram_size - 1:x} "
+            f"size 0x{sram_size:x}"
+        )
 
     is_perm_regions = isdef("CONFIG_SRAM_REGION_PERMISSIONS")
 
@@ -790,7 +789,7 @@ def main():
     is_generic_section_present = isdef("CONFIG_LINKER_GENERIC_SECTIONS_PRESENT_AT_BOOT")
 
     if image_size >= vm_size:
-        error("VM size is too small (have 0x%x need more than 0x%x)" % (vm_size, image_size))
+        error(f"VM size is too small (have 0x{vm_size:x} need more than 0x{image_size:x})")
 
     map_flags = 0
 
@@ -831,8 +830,7 @@ def main():
         # from real mode
         locore_base = syms["_locore_start"]
         locore_size = syms["_lodata_end"] - locore_base
-        debug("Base addresses: physical 0x%x size 0x%x" % (locore_base,
-                                                         locore_size))
+        debug(f"Base addresses: physical 0x{locore_base:x} size 0x{locore_size:x}")
         pt.map(locore_base, None, locore_size, map_flags | FLAG_P | ENTRY_RW)
 
     if isdef("CONFIG_XIP"):

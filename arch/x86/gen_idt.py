@@ -29,13 +29,14 @@ This script outputs three binary tables:
 """
 
 import argparse
-import sys
-import struct
 import os
+import struct
+import sys
+
 import elftools
-from packaging import version
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
+from packaging import version
 
 if version.parse(elftools.__version__) < version.parse('0.24'):
     sys.exit("pyelftools is out of date, need version 0.24 or later")
@@ -226,8 +227,8 @@ def get_intlist(elf):
     spurious_code = header[0]
     spurious_nocode = header[1]
 
-    debug("spurious handler (code)    : %s" % hex(header[0]))
-    debug("spurious handler (no code) : %s" % hex(header[1]))
+    debug(f"spurious handler (code)    : {hex(header[0])}")
+    debug(f"spurious handler (no code) : {hex(header[1])}")
 
     intlist = [i for i in
                struct.iter_unpack(intlist_entry_fmt, intdata)]
@@ -237,7 +238,7 @@ def get_intlist(elf):
     debug("--------------------------")
 
     for irq in intlist:
-        debug("{0:<10} {1:<3} {2:<3} {3:<3} {4:<2}".format(
+        debug("{:<10} {:<3} {:<3} {:<3} {:<2}".format(
             hex(irq[0]),
             "-" if irq[1] == -1 else irq[1],
             "-" if irq[2] == -1 else irq[2],

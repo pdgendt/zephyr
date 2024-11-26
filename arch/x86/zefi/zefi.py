@@ -2,10 +2,11 @@
 # Copyright (c) 2020 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
+import argparse
 import os.path
 import subprocess
+
 import elftools.elf.elffile
-import argparse
 
 ENTRY_SYM = "__start64"
 BOOTARGS_SYM = "efi_bootargs"
@@ -28,13 +29,13 @@ def build_elf(elf_file, include_dirs):
     #
     # Open the ELF file up and find our entry point
     #
-    fp = open(elf_file, "rb")
-    ef = elftools.elf.elffile.ELFFile(fp)
+    with open(elf_file, "rb") as fp:
+        ef = elftools.elf.elffile.ELFFile(fp)
 
     symtab = ef.get_section_by_name(".symtab")
     entry_addr = symtab.get_symbol_by_name(ENTRY_SYM)[0].entry.st_value
 
-    verbose("Entry point address (symbol: %s) 0x%x" % (ENTRY_SYM, entry_addr))
+    verbose(f"Entry point address (symbol: {ENTRY_SYM}) 0x{entry_addr:x}")
 
     #
     # Parse the ELF file and extract segment data
@@ -70,36 +71,32 @@ def build_elf(elf_file, include_dirs):
     #
     # Emit a C header containing the metadata
     #
-    cf = open("zefi-segments.h", "w")
+    with open("zefi-segments.h", "w") as cf:
+        cf.write("/* GENERATED CODE.  DO NOT EDIT. */\n\n")
 
-    cf.write("/* GENERATED CODE.  DO NOT EDIT. */\n\n")
+        cf.write("/* Sizes and offsets specified in 4-byte units.\n")
+        cf.write(" * All addresses 4-byte aligned.\n")
+        cf.write(" */\n")
 
-    cf.write("/* Sizes and offsets specified in 4-byte units.\n")
-    cf.write(" * All addresses 4-byte aligned.\n")
-    cf.write(" */\n")
+        cf.write("struct data_seg { uint64_t addr; uint32_t sz; uint32_t off; };\n\n")
 
-    cf.write("struct data_seg { uint64_t addr; uint32_t sz; uint32_t off; };\n\n")
+        cf.write("static struct data_seg zefi_dsegs[] = {\n")
+        for s in data_segs:
+            cf.write(f"    {{ 0x{s[0]:x}, {s[1]}, {s[2]} }},\n")
+        cf.write("};\n\n")
 
-    cf.write("static struct data_seg zefi_dsegs[] = {\n")
-    for s in data_segs:
-        cf.write("    { 0x%x, %d, %d },\n"
-                % (s[0], s[1], s[2]))
-    cf.write("};\n\n")
+        cf.write("struct zero_seg { uint64_t addr; uint32_t sz; };\n\n")
 
-    cf.write("struct zero_seg { uint64_t addr; uint32_t sz; };\n\n")
+        cf.write("static struct zero_seg zefi_zsegs[] = {\n")
+        for s in zero_segs:
+            cf.write(f"    {{ 0x{s[0]:x}, {s[1]} }},\n")
+        cf.write("};\n\n")
 
-    cf.write("static struct zero_seg zefi_zsegs[] = {\n")
-    for s in zero_segs:
-        cf.write("    { 0x%x, %d },\n"
-                % (s[0], s[1]))
-    cf.write("};\n\n")
+        cf.write(f"static uintptr_t zefi_entry = 0x{entry_addr:x}UL;\n")
 
-    cf.write("static uintptr_t zefi_entry = 0x%xUL;\n" % (entry_addr))
-
-    if symtab.get_symbol_by_name(BOOTARGS_SYM):
-        cf.write("static uintptr_t zefi_bootargs = 0x%xUL;\n" % (symtab.get_symbol_by_name(BOOTARGS_SYM)[0].entry.st_value))
-
-    cf.close()
+        if symtab.get_symbol_by_name(BOOTARGS_SYM):
+            cf.write("static uintptr_t zefi_bootargs = ")
+            cf.write(f"0x{symtab.get_symbol_by_name(BOOTARGS_SYM)[0].entry.st_value:x}UL;\n")
 
     verbose("Metadata header generated.")
 
@@ -127,11 +124,11 @@ def build_elf(elf_file, include_dirs):
     subprocess.run(cmd, check = True)
 
     assert (os.stat("data.dat").st_size % 8) == 0
-    df = open("data.dat", "ab")
-    df.write(data_blob)
-    df.close()
+    with open("data.dat", "ab") as df:
+        df.write(data_blob)
 
-    # FIXME: this generates warnings about our unused trash section having to be moved to make room.  Set its address far away...
+    # FIXME: this generates warnings about our unused trash section having to be moved to make room.
+    # Set its address far away...
     subprocess.run([args.objcopy, "--update-section", ".data=data.dat",
                     "zefi.elf"], check = True)
 
