@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import re
 import fileinput
+import re
 
 # Pass an Xtensa core-isa.h file on stdin or the command line, emits a
 # C file on output containing optimized interrupt dispatch routines.
@@ -52,7 +52,7 @@ def emit_int_handler(ints):
         m = 0
         for i in ints[0:half]:
             m |= 1 << i
-        cprint("if (mask & " + ("0x%x" % (m)) + ") {")
+        cprint("if (mask & " + (f"0x{m:x}") + ") {")
         emit_int_handler(ints[0:half])
         cprint("} else {")
         emit_int_handler(ints[half:])
@@ -112,7 +112,7 @@ cprint("")
 max = 15
 
 for lvl in range(0, max+1):
-    if not lvl in ints_by_lvl:
+    if lvl not in ints_by_lvl:
         ints_by_lvl[lvl] = []
 
 # Emit the handlers
