@@ -193,6 +193,12 @@ check_set_compiler_property(APPEND PROPERTY hosted -fno-freestanding)
 # gcc flag for a freestanding application
 check_set_compiler_property(PROPERTY freestanding -ffreestanding)
 
+# Inject custom search paths
+set_compiler_property(PROPERTY search_path -B${CMAKE_CURRENT_LIST_DIR}/bin)
+
+# Perform preprocessing as a separate pass before compilation
+set_compiler_property(PROPERTY no_integrated_cpp -no-integrated-cpp)
+
 # Flag to enable debugging
 set_compiler_property(PROPERTY debug -g)
 

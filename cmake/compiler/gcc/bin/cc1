@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+
+# Copyright (c) 2024 Basalte bv
+#
+# SPDX-License-Identifier: Apache-2.0
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+
+def parse_args():
+    global args
+
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("-o", "--output")
+
+    # drop unknown arguments
+    args, _ = parser.parse_known_args()
+
+
+def parse_intermediate(file: Path):
+    annotation = re.compile(
+        r'__attribute__\s*\(\(annotate\("(.*)"\)\)\)\s+struct\s+([a-zA-Z0-9_]+)'
+    )
+
+    output = Path.cwd() / "tags.txt"
+
+    with file.open() as i:
+        for line in i:
+            match = annotation.search(line)
+            if match is None:
+                continue
+
+            with output.open("a") as o:
+                o.write(f"{match.group(1)},{match.group(2)}\n")
+
+
+def main():
+    parse_args()
+
+    try:
+        cc1 = (
+            subprocess.check_output([os.environ["COLLECT_GCC"], "--print-prog-name=cc1"])
+            .decode()
+            .strip()
+        )
+        subprocess.check_call([cc1] + sys.argv[1:])
+    except subprocess.CalledProcessError as err:
+        exit(err.returncode)
+
+    if args.output is not None:
+        output = Path(args.output)
+        if output.suffix == '.i':
+            parse_intermediate(output)
+
+
+if __name__ == "__main__":
+    main()

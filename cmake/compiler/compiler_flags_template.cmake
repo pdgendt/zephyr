@@ -102,6 +102,12 @@ set_compiler_property(PROPERTY hosted)
 # gcc flag for a freestanding application
 set_compiler_property(PROPERTY freestanding)
 
+# Inject custom search paths
+set_compiler_property(PROPERTY search_path)
+
+# Perform preprocessing as a separate pass before compilation
+set_compiler_property(PROPERTY no_integrated_cpp)
+
 # Flag to include debugging symbol in compilation
 set_compiler_property(PROPERTY debug)
 
