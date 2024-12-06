@@ -160,10 +160,10 @@
  */
 
 /* Indicates this is a driver subsystem */
-#define __subsystem
+#define __subsystem __attribute__((annotate("__subsystem")))
 
 /* Indicates this is a network socket object */
-#define __net_socket
+#define __net_socket __attribute__((annotate("__net_socket")))
 
 #ifndef BUILD_ASSERT
 /* Compile-time assertion that makes the build to fail.
