@@ -26,14 +26,18 @@ def process_command(command: str):
     _, command_remaining = parser.parse_known_args(shlex.split(command))
 
     # Generate the source code as produced by the preprocessor
-    ir_output = subprocess.check_output(command_remaining + ['-E']).decode()
+    process = subprocess.Popen(command_remaining + ["-E", "-P"], stdout=subprocess.PIPE)
 
-    for line in ir_output.splitlines():
-        match = ANNOTATION.search(line)
-        if match is None:
-            continue
-
-        print(f"{match.group(1)},{match.group(2)}")
+    assert process.stdout is not None
+    for line in iter(process.stdout.readline, b""):
+        line = line.decode().strip()
+        # #print(line)
+        #
+        # match = ANNOTATION.search(line)
+        # if match is None:
+        #     continue
+        #
+        # print(f"{match.group(1)},{match.group(2)}")
 
 
 def parse_args():
