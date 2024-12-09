@@ -9,28 +9,51 @@ import os
 import re
 import shlex
 import subprocess
+from pathlib import Path
 
-ANNOTATION = re.compile(
-    r'__attribute__\s*\(\(annotate\(\s*"(.*)"\s*\)\)\)\s+struct\s+([a-zA-Z0-9_]+)'
-)
+from pycparser import CParser
+import pycparser
 
+PYCPARSER_FAKE_INCLUDE = Path(pycparser.__file__).parent / "utils" / "fake_libc_include"
 
-def process_command(command: str):
+# ANNOTATION = re.compile(
+#     r'__attribute__\s*\(\(annotate\(\s*"(.*)"\s*\)\)\)\s+struct\s+([a-zA-Z0-9_]+)'
+# )
+
+print(PYCPARSER_FAKE_INCLUDE)
+
+def process_command(command: str, file: Path, directory: Path):
     parser = argparse.ArgumentParser()
+
+    # Only parse c files
+    if file.suffix != ".c":
+        return
 
     if os.name == "nt":
         command = command.replace("\\", "\\\\") # Fix windows paths
 
     # Use the argument parser to drop the output argument and keep everything else
     parser.add_argument("-o", "--output")
-    _, command_remaining = parser.parse_known_args(shlex.split(command))
+    args, command_remaining = parser.parse_known_args(shlex.split(command))
 
     # Generate the source code as produced by the preprocessor
-    process = subprocess.Popen(command_remaining + ["-E", "-P"], stdout=subprocess.PIPE)
+    # process = subprocess.Popen(command_remaining + ["-E", "-P"], stdout=subprocess.PIPE)
+    # assert process.stdout is not None
+    src = subprocess.check_output(
+        command_remaining + ["-E", "-P", f"-I{PYCPARSER_FAKE_INCLUDE}"]
+    ).decode()
 
-    assert process.stdout is not None
-    for line in iter(process.stdout.readline, b""):
-        line = line.decode().strip()
+    cparser = CParser()
+    try:
+        ast = cparser.parse(src, directory / (args.output + ".i"))
+    finally:
+        print(command)
+        with open(directory / (args.output + ".i"), "w") as fp:
+            fp.write(src)
+
+    ast.dump()
+    # for line in iter(process.stdout.readline, b""):
+    #     line = line.decode().strip()
         # #print(line)
         #
         # match = ANNOTATION.search(line)
@@ -64,7 +87,7 @@ def main():
 
     for item in db_json:
         if "command" in item:
-            process_command(item["command"])
+            process_command(item["command"], Path(item["file"]), Path(item["directory"]))
 
 
 if __name__ == "__main__":
