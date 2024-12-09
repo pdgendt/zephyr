@@ -124,14 +124,19 @@ class Pointer:
 # https://cs.wmich.edu/~gupta/teaching/cs4850/sumII06/The%20syntax%20of%20C%20in%20Backus-Naur%20form.htm
 def p_translation_unit(p):
     '''
-    translation-unit : translation-unit external-declaration
-                     | external-declaration
+    translation-unit : external-declaration
+                     | external-declaration translation-units
     '''
     if len(p) == 3:
         p[0] = p[1] + [p[2]]
     else:
         p[0] = [p[1]]
 
+def p_translation_units(p):
+    '''
+    translation-units : empty
+                      | translation-unit translation-units
+    '''
 
 def p_external_declaration(p):
     '''
