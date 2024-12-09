@@ -1,3 +1,5 @@
+from dataclasses import dataclass, field
+
 from ply import lex, yacc
 
 tokens = [
@@ -99,20 +101,95 @@ def t_ANY_NUMBER(t):
 
 def t_ANY_STRING(t):
     r'"([^"\n]|(\\"))*"'
+    t.value = t.value[1:-1]
     return t
 
 
-# Build lexer
-lexer = lex.lex()
+@dataclass()
+class CAttr:
+    id: str
+    prefix: str = ""
+    args: list[str | int] = field(default_factory=list)
 
-# Example code with attributes
-code = """
-struct [[zpp::annotate("subsystem","test")]] my_driver_api {
-    uint8_t t1;
-};
-"""
 
-lexer.input(code)
-print("Tokens:")
-for token in lexer:
-    print(token)
+def p_cattr_declaration(p):
+    '''
+    cattr_delcaration : cattr_standard
+                      | cattr_prefix
+                      | cattr_cargs
+                      | cattr_prefix_cargs
+    '''
+    p[0] = p[1]
+
+
+def p_cattr_standard(p):
+    '''
+    cattr_standard : ID CATTR
+    '''
+    p[0] = CAttr(id=p[1])
+
+
+def p_cattr_prefix(p):
+    '''
+    cattr_prefix : ID DCOLON ID CATTR
+    '''
+    p[0] = CAttr(id=p[3], prefix=p[1])
+
+
+def p_cattr_cargs(p):
+    '''
+    cattr_cargs : ID cargs_list CATTR
+    '''
+    p[0] = CAttr(id=p[1], args=p[2])
+
+
+def p_cattr_prefix_cargs(p):
+    '''
+    cattr_prefix_cargs : ID DCOLON ID cargs_list CARGS CATTR
+    '''
+    p[0] = CAttr(id=p[3], prefix=p[1], args=p[4])
+
+
+def p_cargs_list(p):
+    '''
+    cargs_list : cargs_val
+               | cargs_list COMMA cargs_val
+    '''
+    if len(p) == 2:
+        p[0] = [p[1]]
+    else:
+        p[0] = p[1] + [p[3]]
+
+
+def p_cargs_val(p):
+    '''
+    cargs_val : STRING
+              | NUMBER
+              | empty
+    '''
+    p[0] = p[1]
+
+
+def p_empty(_):
+    'empty :'
+    pass
+
+
+def p_error(p):
+    print('error', p)
+
+
+def main():
+    # Example code with attributes
+    code = """
+    void [[zpp::syscall]] my_func(const struct device *dev, uint8_t arg);
+    struct [[zpp::annotate("subsystem","test")]] my_driver_api {};
+    """
+
+    lexer = lex.lex()
+    parser = yacc.yacc()
+    print(parser.parse(code, lexer=lexer))
+
+
+if __name__ == "__main__":
+    main()
