@@ -12,15 +12,10 @@ import subprocess
 from pathlib import Path
 
 from pycparser import CParser
-import pycparser
-
-PYCPARSER_FAKE_INCLUDE = Path(pycparser.__file__).parent / "utils" / "fake_libc_include"
 
 # ANNOTATION = re.compile(
 #     r'__attribute__\s*\(\(annotate\(\s*"(.*)"\s*\)\)\)\s+struct\s+([a-zA-Z0-9_]+)'
 # )
-
-print(PYCPARSER_FAKE_INCLUDE)
 
 def process_command(command: str, file: Path, directory: Path):
     parser = argparse.ArgumentParser()
@@ -40,7 +35,8 @@ def process_command(command: str, file: Path, directory: Path):
     # process = subprocess.Popen(command_remaining + ["-E", "-P"], stdout=subprocess.PIPE)
     # assert process.stdout is not None
     src = subprocess.check_output(
-        command_remaining + ["-E", "-P", f"-I{PYCPARSER_FAKE_INCLUDE}"]
+        command_remaining
+        + ["-E", "-P", "-include", str(Path(__file__).parents[1] / "zpp" / "stubs.h")]
     ).decode()
 
     cparser = CParser()
