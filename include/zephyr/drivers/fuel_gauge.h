@@ -416,6 +416,8 @@ static inline int z_impl_fuel_gauge_battery_cutoff(const struct device *dev)
 }
 #endif /* __cplusplus */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/fuel_gauge.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_BATTERY_H_ */

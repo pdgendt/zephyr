@@ -980,6 +980,8 @@ __syscall int uart_drv_cmd(const struct device *dev, uint32_t cmd, uint32_t p);
  */
 
 #include <zephyr/drivers/uart/uart_internal.h>
+#ifndef __ZPP__
 #include <zephyr/syscalls/uart.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_UART_H_ */

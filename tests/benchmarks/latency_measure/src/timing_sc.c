@@ -31,7 +31,9 @@ timing_t z_vrfy_timing_timestamp_get(void)
 {
 	return z_impl_timing_timestamp_get();
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/timing_timestamp_get_mrsh.c>
+#endif
 #endif
 
 static void start_thread_entry(void *p1, void *p2, void *p3)

@@ -346,7 +346,9 @@ out:
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/z_zsock_getaddrinfo_internal_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 #endif /* defined(CONFIG_DNS_RESOLVER) */

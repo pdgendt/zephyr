@@ -38,7 +38,9 @@ int z_vrfy_k_condvar_init(struct k_condvar *condvar)
 	K_OOPS(K_SYSCALL_OBJ_INIT(condvar, K_OBJ_CONDVAR));
 	return z_impl_k_condvar_init(condvar);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_condvar_init_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 int z_impl_k_condvar_signal(struct k_condvar *condvar)
@@ -70,7 +72,9 @@ int z_vrfy_k_condvar_signal(struct k_condvar *condvar)
 	K_OOPS(K_SYSCALL_OBJ(condvar, K_OBJ_CONDVAR));
 	return z_impl_k_condvar_signal(condvar);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_condvar_signal_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 int z_impl_k_condvar_broadcast(struct k_condvar *condvar)
@@ -103,7 +107,9 @@ int z_vrfy_k_condvar_broadcast(struct k_condvar *condvar)
 	K_OOPS(K_SYSCALL_OBJ(condvar, K_OBJ_CONDVAR));
 	return z_impl_k_condvar_broadcast(condvar);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_condvar_broadcast_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 int z_impl_k_condvar_wait(struct k_condvar *condvar, struct k_mutex *mutex,
@@ -132,7 +138,9 @@ int z_vrfy_k_condvar_wait(struct k_condvar *condvar, struct k_mutex *mutex,
 	K_OOPS(K_SYSCALL_OBJ(mutex, K_OBJ_MUTEX));
 	return z_impl_k_condvar_wait(condvar, mutex, timeout);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_condvar_wait_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 #ifdef CONFIG_OBJ_CORE_CONDVAR

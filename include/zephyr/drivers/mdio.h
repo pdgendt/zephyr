@@ -237,6 +237,8 @@ static inline int z_impl_mdio_write_c45(const struct device *dev, uint8_t prtad,
  * @}
  */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/mdio.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_MDIO_H_ */

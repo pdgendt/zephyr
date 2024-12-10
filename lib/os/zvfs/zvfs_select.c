@@ -288,5 +288,7 @@ out:
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zvfs_select_mrsh.c>
+#endif
 #endif

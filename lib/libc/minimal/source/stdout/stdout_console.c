@@ -35,7 +35,9 @@ static inline int z_vrfy_zephyr_fputc(int c, FILE *stream)
 {
 	return z_impl_zephyr_fputc(c, stream);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zephyr_fputc_mrsh.c>
+#endif
 #endif
 
 int fputc(int c, FILE *stream)
@@ -104,7 +106,9 @@ static inline size_t z_vrfy_zephyr_fwrite(const void *ZRESTRICT ptr,
 	K_OOPS(K_SYSCALL_MEMORY_ARRAY_READ(ptr, nitems, size));
 	return z_impl_zephyr_fwrite(ptr, size, nitems, stream);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zephyr_fwrite_mrsh.c>
+#endif
 #endif
 
 size_t fwrite(const void *ZRESTRICT ptr, size_t size, size_t nitems,

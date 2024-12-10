@@ -93,7 +93,9 @@ static inline int z_vrfy_k_pipe_alloc_init(struct k_pipe *pipe, size_t size)
 
 	return z_impl_k_pipe_alloc_init(pipe, size);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_pipe_alloc_init_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 static inline void handle_poll_events(struct k_pipe *pipe)
@@ -126,7 +128,9 @@ void z_vrfy_k_pipe_flush(struct k_pipe *pipe)
 
 	z_impl_k_pipe_flush(pipe);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_pipe_flush_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 void z_impl_k_pipe_buffer_flush(struct k_pipe *pipe)
@@ -525,7 +529,9 @@ int z_vrfy_k_pipe_put(struct k_pipe *pipe, const void *data,
 				 bytes_to_write, bytes_written, min_xfer,
 				 timeout);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_pipe_put_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 static int pipe_get_internal(k_spinlock_key_t key, struct k_pipe *pipe,
@@ -733,7 +739,9 @@ int z_vrfy_k_pipe_get(struct k_pipe *pipe, void *data, size_t bytes_to_read,
 				bytes_to_read, bytes_read, min_xfer,
 				timeout);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_pipe_get_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 size_t z_impl_k_pipe_read_avail(struct k_pipe *pipe)
@@ -770,7 +778,9 @@ size_t z_vrfy_k_pipe_read_avail(struct k_pipe *pipe)
 
 	return z_impl_k_pipe_read_avail(pipe);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_pipe_read_avail_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 size_t z_impl_k_pipe_write_avail(struct k_pipe *pipe)
@@ -807,7 +817,9 @@ size_t z_vrfy_k_pipe_write_avail(struct k_pipe *pipe)
 
 	return z_impl_k_pipe_write_avail(pipe);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_pipe_write_avail_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 #ifdef CONFIG_OBJ_CORE_PIPE

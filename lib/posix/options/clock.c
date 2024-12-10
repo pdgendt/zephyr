@@ -58,7 +58,9 @@ int z_vrfy___posix_clock_get_base(clockid_t clock_id, struct timespec *ts)
 	K_OOPS(K_SYSCALL_MEMORY_WRITE(ts, sizeof(*ts)));
 	return z_impl___posix_clock_get_base(clock_id, ts);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/__posix_clock_get_base_mrsh.c>
+#endif
 #endif
 
 int clock_gettime(clockid_t clock_id, struct timespec *ts)

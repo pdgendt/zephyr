@@ -132,7 +132,9 @@ static inline struct k_heap *z_vrfy_ret_resource_pool_ptr(void)
 {
 	return z_impl_ret_resource_pool_ptr();
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/ret_resource_pool_ptr_mrsh.c>
+#endif
 struct k_heap *child_heap_mem_ptr;
 struct k_heap *parent_heap_mem_ptr;
 

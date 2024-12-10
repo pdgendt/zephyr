@@ -13,7 +13,9 @@ static inline int z_vrfy_sys_cache_data_flush_range(void *addr, size_t size)
 
 	return z_impl_sys_cache_data_flush_range(addr, size);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/sys_cache_data_flush_range_mrsh.c>
+#endif
 
 static inline int z_vrfy_sys_cache_data_invd_range(void *addr, size_t size)
 {
@@ -21,7 +23,9 @@ static inline int z_vrfy_sys_cache_data_invd_range(void *addr, size_t size)
 
 	return z_impl_sys_cache_data_invd_range(addr, size);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/sys_cache_data_invd_range_mrsh.c>
+#endif
 
 static inline int z_vrfy_sys_cache_data_flush_and_invd_range(void *addr, size_t size)
 {
@@ -29,4 +33,6 @@ static inline int z_vrfy_sys_cache_data_flush_and_invd_range(void *addr, size_t 
 
 	return z_impl_sys_cache_data_flush_and_invd_range(addr, size);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/sys_cache_data_flush_and_invd_range_mrsh.c>
+#endif

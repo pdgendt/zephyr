@@ -154,6 +154,8 @@ static void z_vrfy_xtensa_user_fault(unsigned int reason)
 	z_impl_xtensa_user_fault(reason);
 }
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/xtensa_user_fault_mrsh.c>
+#endif
 
 #endif /* CONFIG_USERSPACE */

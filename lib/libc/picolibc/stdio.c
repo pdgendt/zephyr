@@ -19,7 +19,9 @@ static inline int z_vrfy_zephyr_fputc(int c, FILE *stream)
 {
 	return z_impl_zephyr_fputc(c, stream);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zephyr_fputc_mrsh.c>
+#endif
 #endif
 
 static int picolibc_put(char a, FILE *f)

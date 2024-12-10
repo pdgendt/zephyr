@@ -172,6 +172,8 @@ static inline int z_impl_ps2_disable_callback(const struct device *dev)
  * @}
  */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/ps2.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_PS2_H_ */

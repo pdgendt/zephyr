@@ -269,6 +269,8 @@ enum {
 }
 #endif
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/fdtable.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_SYS_FDTABLE_H_ */

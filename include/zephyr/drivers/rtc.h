@@ -535,6 +535,8 @@ static inline int32_t rtc_calibration_from_frequency(uint32_t frequency)
 }
 #endif
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/rtc.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_RTC_H_ */

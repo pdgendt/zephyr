@@ -813,6 +813,8 @@ static inline uint32_t dma_burst_index(uint32_t burst)
 }
 #endif
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/dma.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_DMA_H_ */

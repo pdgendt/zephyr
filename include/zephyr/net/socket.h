@@ -1181,7 +1181,9 @@ struct net_socket_register {
 }
 #endif
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/socket.h>
+#endif
 
 /**
  * @}

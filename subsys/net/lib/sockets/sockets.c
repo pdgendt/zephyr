@@ -101,7 +101,9 @@ void *z_vrfy_zsock_get_context_object(int sock)
 	return z_impl_zsock_get_context_object(sock);
 }
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_get_context_object_mrsh.c>
+#endif
 #endif
 
 int z_impl_zsock_socket(int family, int type, int proto)
@@ -144,7 +146,9 @@ static inline int z_vrfy_zsock_socket(int family, int type, int proto)
 	 */
 	return z_impl_zsock_socket(family, type, proto);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_socket_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 extern int zvfs_close(int fd);
@@ -169,7 +173,9 @@ static inline int z_vrfy_zsock_close(int sock)
 
 	return z_impl_zsock_close(sock);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_close_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 int z_impl_zsock_shutdown(int sock, int how)
@@ -212,7 +218,9 @@ static inline int z_vrfy_zsock_shutdown(int sock, int how)
 {
 	return z_impl_zsock_shutdown(sock, how);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_shutdown_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 int z_impl_zsock_bind(int sock, const struct sockaddr *addr, socklen_t addrlen)
@@ -240,7 +248,9 @@ static inline int z_vrfy_zsock_bind(int sock, const struct sockaddr *addr,
 	return z_impl_zsock_bind(sock, (struct sockaddr *)&dest_addr_copy,
 				addrlen);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_bind_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 int z_impl_zsock_connect(int sock, const struct sockaddr *addr,
@@ -269,7 +279,9 @@ int z_vrfy_zsock_connect(int sock, const struct sockaddr *addr,
 	return z_impl_zsock_connect(sock, (struct sockaddr *)&dest_addr_copy,
 				   addrlen);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_connect_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 int z_impl_zsock_listen(int sock, int backlog)
@@ -290,7 +302,9 @@ static inline int z_vrfy_zsock_listen(int sock, int backlog)
 {
 	return z_impl_zsock_listen(sock, backlog);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_listen_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 int z_impl_zsock_accept(int sock, struct sockaddr *addr, socklen_t *addrlen)
@@ -328,7 +342,9 @@ static inline int z_vrfy_zsock_accept(int sock, struct sockaddr *addr,
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_accept_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 ssize_t z_impl_zsock_sendto(int sock, const void *buf, size_t len, int flags,
@@ -366,7 +382,9 @@ ssize_t z_vrfy_zsock_sendto(int sock, const void *buf, size_t len, int flags,
 			dest_addr ? (struct sockaddr *)&dest_addr_copy : NULL,
 			addrlen);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_sendto_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 ssize_t z_impl_zsock_sendmsg(int sock, const struct msghdr *msg, int flags)
@@ -471,7 +489,9 @@ fail:
 
 	return -1;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_sendmsg_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 ssize_t z_impl_zsock_recvfrom(int sock, void *buf, size_t max_len, int flags,
@@ -521,7 +541,9 @@ ssize_t z_vrfy_zsock_recvfrom(int sock, void *buf, size_t max_len, int flags,
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_recvfrom_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 ssize_t z_impl_zsock_recvmsg(int sock, struct msghdr *msg, int flags)
@@ -707,7 +729,9 @@ fail:
 
 	return -1;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_recvmsg_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 /* As this is limited function, we don't follow POSIX signature, with
@@ -746,7 +770,9 @@ static inline int z_vrfy_zsock_fcntl_impl(int sock, int cmd, int flags)
 {
 	return z_impl_zsock_fcntl_impl(sock, cmd, flags);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_fcntl_impl_mrsh.c>
+#endif
 #endif
 
 int z_impl_zsock_ioctl_impl(int sock, unsigned long request, va_list args)
@@ -802,7 +828,9 @@ static inline int z_vrfy_zsock_ioctl_impl(int sock, unsigned long request, va_li
 
 	return z_impl_zsock_ioctl_impl(sock, request, args);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_ioctl_impl_mrsh.c>
+#endif
 #endif
 
 int z_impl_zsock_inet_pton(sa_family_t family, const char *src, void *dst)
@@ -841,7 +869,9 @@ static inline int z_vrfy_zsock_inet_pton(sa_family_t family,
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_inet_pton_mrsh.c>
+#endif
 #endif
 
 int z_impl_zsock_getsockopt(int sock, int level, int optname,
@@ -886,7 +916,9 @@ int z_vrfy_zsock_getsockopt(int sock, int level, int optname,
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_getsockopt_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 int z_impl_zsock_setsockopt(int sock, int level, int optname,
@@ -921,7 +953,9 @@ int z_vrfy_zsock_setsockopt(int sock, int level, int optname,
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_setsockopt_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 int z_impl_zsock_getpeername(int sock, struct sockaddr *addr,
@@ -966,7 +1000,9 @@ static inline int z_vrfy_zsock_getpeername(int sock, struct sockaddr *addr,
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_getpeername_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 int z_impl_zsock_getsockname(int sock, struct sockaddr *addr,
@@ -1011,5 +1047,7 @@ static inline int z_vrfy_zsock_getsockname(int sock, struct sockaddr *addr,
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_getsockname_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */

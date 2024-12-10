@@ -8,6 +8,8 @@
 
 __syscall int magic_syscall(unsigned int *cookie);
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/app_syscall.h>
+#endif
 
 #endif /* MAGIC_SYSCALL_H */

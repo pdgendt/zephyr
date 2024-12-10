@@ -105,7 +105,9 @@ void z_vrfy_k_mem_paging_stats_get(struct k_mem_paging_stats_t *stats)
 	K_OOPS(K_SYSCALL_MEMORY_WRITE(stats, sizeof(*stats)));
 	z_impl_k_mem_paging_stats_get(stats);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_mem_paging_stats_get_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 #ifdef CONFIG_DEMAND_PAGING_THREAD_STATS
@@ -129,7 +131,9 @@ void z_vrfy_k_mem_paging_thread_stats_get(struct k_thread *thread,
 	K_OOPS(K_SYSCALL_MEMORY_WRITE(stats, sizeof(*stats)));
 	z_impl_k_mem_paging_thread_stats_get(thread, stats);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_mem_paging_thread_stats_get_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 #endif /* CONFIG_DEMAND_PAGING_THREAD_STATS */
@@ -227,7 +231,9 @@ void z_vrfy_k_mem_paging_histogram_eviction_get(
 	K_OOPS(K_SYSCALL_MEMORY_WRITE(hist, sizeof(*hist)));
 	z_impl_k_mem_paging_histogram_eviction_get(hist);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_mem_paging_histogram_eviction_get_mrsh.c>
+#endif
 
 static inline
 void z_vrfy_k_mem_paging_histogram_backing_store_page_in_get(
@@ -236,7 +242,9 @@ void z_vrfy_k_mem_paging_histogram_backing_store_page_in_get(
 	K_OOPS(K_SYSCALL_MEMORY_WRITE(hist, sizeof(*hist)));
 	z_impl_k_mem_paging_histogram_backing_store_page_in_get(hist);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_mem_paging_histogram_backing_store_page_in_get_mrsh.c>
+#endif
 
 static inline
 void z_vrfy_k_mem_paging_histogram_backing_store_page_out_get(
@@ -245,7 +253,9 @@ void z_vrfy_k_mem_paging_histogram_backing_store_page_out_get(
 	K_OOPS(K_SYSCALL_MEMORY_WRITE(hist, sizeof(*hist)));
 	z_impl_k_mem_paging_histogram_backing_store_page_out_get(hist);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_mem_paging_histogram_backing_store_page_out_get_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 #endif /* CONFIG_DEMAND_PAGING_TIMING_HISTOGRAM */

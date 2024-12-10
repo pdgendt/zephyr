@@ -34,5 +34,7 @@ extern "C" {
 }
 #endif
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/app_api.h>
+#endif
 #endif /* _TEST_EDK_H_ */

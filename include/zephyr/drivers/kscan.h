@@ -145,6 +145,8 @@ static inline int z_impl_kscan_disable_callback(const struct device *dev)
  * @}
  */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/kscan.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_KB_SCAN_H_ */

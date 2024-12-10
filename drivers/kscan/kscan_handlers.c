@@ -15,7 +15,9 @@ static inline int z_vrfy_kscan_config(const struct device *dev,
 				    "callback cannot be set from user mode"));
 	return z_impl_kscan_config((const struct device *)dev, callback_isr);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/kscan_config_mrsh.c>
+#endif
 
 static inline int z_vrfy_kscan_disable_callback(const struct device *dev)
 {
@@ -23,7 +25,9 @@ static inline int z_vrfy_kscan_disable_callback(const struct device *dev)
 
 	return z_impl_kscan_disable_callback((const struct device *)dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/kscan_disable_callback_mrsh.c>
+#endif
 
 static int z_vrfy_kscan_enable_callback(const struct device *dev)
 {
@@ -31,4 +35,6 @@ static int z_vrfy_kscan_enable_callback(const struct device *dev)
 
 	return z_impl_kscan_enable_callback((const struct device *)dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/kscan_enable_callback_mrsh.c>
+#endif

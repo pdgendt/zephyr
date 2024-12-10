@@ -613,7 +613,9 @@ __syscall void sys_clock_tick_set(uint64_t tick);
 #endif
 
 #ifndef ZTEST_UNITTEST
+#ifndef __ZPP__
 #include <zephyr/syscalls/ztest_test.h>
+#endif
 #endif
 
 #endif /* ZEPHYR_TESTSUITE_ZTEST_TEST_H_ */

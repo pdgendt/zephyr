@@ -165,7 +165,9 @@ static inline void z_vrfy_k_str_out(char *c, size_t n)
 	K_OOPS(K_SYSCALL_MEMORY_READ(c, n));
 	z_impl_k_str_out((char *)c, n);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_str_out_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 /**

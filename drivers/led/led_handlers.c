@@ -14,7 +14,9 @@ static inline int z_vrfy_led_blink(const struct device *dev, uint32_t led,
 	return z_impl_led_blink((const struct device *)dev, led, delay_on,
 					delay_off);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/led_blink_mrsh.c>
+#endif
 
 static inline int z_vrfy_led_get_info(const struct device *dev, uint32_t led,
 				      const struct led_info **info)
@@ -23,7 +25,9 @@ static inline int z_vrfy_led_get_info(const struct device *dev, uint32_t led,
 	K_OOPS(K_SYSCALL_MEMORY_WRITE(info, sizeof(*info)));
 	return z_impl_led_get_info(dev, led, info);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/led_get_info_mrsh.c>
+#endif
 
 static inline int z_vrfy_led_set_brightness(const struct device *dev,
 					    uint32_t led,
@@ -33,7 +37,9 @@ static inline int z_vrfy_led_set_brightness(const struct device *dev,
 	return z_impl_led_set_brightness((const struct device *)dev, led,
 					 value);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/led_set_brightness_mrsh.c>
+#endif
 
 static inline int
 z_vrfy_led_write_channels(const struct device *dev, uint32_t start_channel,
@@ -43,7 +49,9 @@ z_vrfy_led_write_channels(const struct device *dev, uint32_t start_channel,
 	K_OOPS(K_SYSCALL_MEMORY_READ(buf, num_channels));
 	return z_impl_led_write_channels(dev, start_channel, num_channels, buf);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/led_write_channels_mrsh.c>
+#endif
 
 static inline int z_vrfy_led_set_channel(const struct device *dev,
 					 uint32_t channel, uint8_t value)
@@ -51,7 +59,9 @@ static inline int z_vrfy_led_set_channel(const struct device *dev,
 	K_OOPS(K_SYSCALL_OBJ(dev, K_OBJ_DRIVER_LED));
 	return z_impl_led_set_channel(dev, channel, value);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/led_set_channel_mrsh.c>
+#endif
 
 static inline int z_vrfy_led_set_color(const struct device *dev, uint32_t led,
 				       uint8_t num_colors, const uint8_t *color)
@@ -60,18 +70,24 @@ static inline int z_vrfy_led_set_color(const struct device *dev, uint32_t led,
 	K_OOPS(K_SYSCALL_MEMORY_READ(color, num_colors));
 	return z_impl_led_set_color(dev, led, num_colors, color);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/led_set_color_mrsh.c>
+#endif
 
 static inline int z_vrfy_led_on(const struct device *dev, uint32_t led)
 {
 	K_OOPS(K_SYSCALL_DRIVER_LED(dev, on));
 	return z_impl_led_on((const struct device *)dev, led);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/led_on_mrsh.c>
+#endif
 
 static inline int z_vrfy_led_off(const struct device *dev, uint32_t led)
 {
 	K_OOPS(K_SYSCALL_DRIVER_LED(dev, off));
 	return z_impl_led_off((const struct device *)dev, led);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/led_off_mrsh.c>
+#endif

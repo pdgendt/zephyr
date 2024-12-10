@@ -10,6 +10,8 @@
 __syscall void missing_syscall(void);
 __syscall void check_syscall_context(void);
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/test_syscall.h>
+#endif
 
 #endif

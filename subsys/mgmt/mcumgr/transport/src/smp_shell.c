@@ -19,7 +19,9 @@
 #include <zephyr/mgmt/mcumgr/transport/smp.h>
 #include <zephyr/mgmt/mcumgr/transport/serial.h>
 #include <zephyr/mgmt/mcumgr/transport/smp_shell.h>
+#ifndef __ZPP__
 #include <zephyr/syscalls/uart.h>
+#endif
 #include <string.h>
 
 #include <mgmt/mcumgr/transport/smp_internal.h>

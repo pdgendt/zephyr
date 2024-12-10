@@ -133,6 +133,8 @@ static inline int z_impl_comparator_trigger_is_pending(const struct device *dev)
 
 /** @} */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/comparator.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_COMPARATOR_H_ */

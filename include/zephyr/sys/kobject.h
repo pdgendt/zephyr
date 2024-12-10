@@ -283,7 +283,9 @@ static inline void k_object_free(void *obj)
 
 /** @} */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/kobject.h>
+#endif
 #ifdef __cplusplus
 }
 #endif

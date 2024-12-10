@@ -21,7 +21,9 @@ static inline int z_vrfy_dac_channel_setup(const struct device *dev,
 	return z_impl_dac_channel_setup((const struct device *)dev,
 					&channel_cfg);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/dac_channel_setup_mrsh.c>
+#endif
 
 static inline int z_vrfy_dac_write_value(const struct device *dev,
 					 uint8_t channel, uint32_t value)
@@ -31,4 +33,6 @@ static inline int z_vrfy_dac_write_value(const struct device *dev,
 	return z_impl_dac_write_value((const struct device *)dev, channel,
 				      value);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/dac_write_value_mrsh.c>
+#endif

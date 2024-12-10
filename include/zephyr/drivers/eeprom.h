@@ -139,6 +139,8 @@ static inline size_t z_impl_eeprom_get_size(const struct device *dev)
  * @}
  */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/eeprom.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_EEPROM_H_ */

@@ -85,6 +85,8 @@ __syscall int devmux_select_set(struct device *dev, size_t index);
 }
 #endif
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/devmux.h>
+#endif
 
 #endif /* INCLUDE_ZEPHYR_DRIVERS_MISC_DEVMUX_H_ */

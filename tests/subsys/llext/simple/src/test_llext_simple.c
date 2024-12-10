@@ -82,7 +82,9 @@ static inline int z_vrfy_ext_syscall_ok(int a)
 {
 	return z_impl_ext_syscall_ok(a);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/ext_syscall_ok_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 

@@ -225,7 +225,9 @@ static inline void z_vrfy_blow_up_priv_stack(void)
 {
 	z_impl_blow_up_priv_stack();
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/blow_up_priv_stack_mrsh.c>
+#endif
 
 #endif /* CONFIG_USERSPACE */
 #endif /* CONFIG_STACK_SENTINEL */

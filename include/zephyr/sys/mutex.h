@@ -128,7 +128,9 @@ static inline int sys_mutex_unlock(struct sys_mutex *mutex)
 	return z_sys_mutex_kernel_unlock(mutex);
 }
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/mutex.h>
+#endif
 
 #else
 #include <zephyr/kernel.h>

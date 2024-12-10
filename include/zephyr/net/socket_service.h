@@ -199,7 +199,9 @@ void net_socket_service_foreach(net_socket_service_cb_t cb, void *user_data);
 }
 #endif
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/socket_service.h>
+#endif
 
 /**
  * @}

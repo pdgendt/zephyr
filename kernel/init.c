@@ -397,7 +397,9 @@ static inline int z_vrfy_device_init(const struct device *dev)
 
 	return z_impl_device_init(dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/device_init_mrsh.c>
+#endif
 #endif
 
 extern void boot_banner(void);

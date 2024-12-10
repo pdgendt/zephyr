@@ -720,6 +720,8 @@ static inline uint16_t w1_crc16(const uint16_t seed, const uint8_t *src,
 /**
  * @}
  */
+#ifndef __ZPP__
 #include <zephyr/syscalls/w1.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_W1_H_ */

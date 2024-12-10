@@ -415,7 +415,9 @@ static inline void z_vrfy_test_arm_user_interrupt_syscall(void)
 {
 	z_impl_test_arm_user_interrupt_syscall();
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/test_arm_user_interrupt_syscall_mrsh.c>
+#endif
 
 ZTEST_USER(arm_interrupt, test_arm_user_interrupt)
 {

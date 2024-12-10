@@ -188,7 +188,9 @@ static inline void z_vrfy_k_timer_start(struct k_timer *timer,
 	K_OOPS(K_SYSCALL_OBJ(timer, K_OBJ_TIMER));
 	z_impl_k_timer_start(timer, duration, period);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_timer_start_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 void z_impl_k_timer_stop(struct k_timer *timer)
@@ -221,7 +223,9 @@ static inline void z_vrfy_k_timer_stop(struct k_timer *timer)
 	K_OOPS(K_SYSCALL_OBJ(timer, K_OBJ_TIMER));
 	z_impl_k_timer_stop(timer);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_timer_stop_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 uint32_t z_impl_k_timer_status_get(struct k_timer *timer)
@@ -241,7 +245,9 @@ static inline uint32_t z_vrfy_k_timer_status_get(struct k_timer *timer)
 	K_OOPS(K_SYSCALL_OBJ(timer, K_OBJ_TIMER));
 	return z_impl_k_timer_status_get(timer);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_timer_status_get_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 uint32_t z_impl_k_timer_status_sync(struct k_timer *timer)
@@ -309,7 +315,9 @@ static inline uint32_t z_vrfy_k_timer_status_sync(struct k_timer *timer)
 	K_OOPS(K_SYSCALL_OBJ(timer, K_OBJ_TIMER));
 	return z_impl_k_timer_status_sync(timer);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_timer_status_sync_mrsh.c>
+#endif
 
 static inline k_ticks_t z_vrfy_k_timer_remaining_ticks(
 						const struct k_timer *timer)
@@ -317,7 +325,9 @@ static inline k_ticks_t z_vrfy_k_timer_remaining_ticks(
 	K_OOPS(K_SYSCALL_OBJ(timer, K_OBJ_TIMER));
 	return z_impl_k_timer_remaining_ticks(timer);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_timer_remaining_ticks_mrsh.c>
+#endif
 
 static inline k_ticks_t z_vrfy_k_timer_expires_ticks(
 						const struct k_timer *timer)
@@ -325,14 +335,18 @@ static inline k_ticks_t z_vrfy_k_timer_expires_ticks(
 	K_OOPS(K_SYSCALL_OBJ(timer, K_OBJ_TIMER));
 	return z_impl_k_timer_expires_ticks(timer);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_timer_expires_ticks_mrsh.c>
+#endif
 
 static inline void *z_vrfy_k_timer_user_data_get(const struct k_timer *timer)
 {
 	K_OOPS(K_SYSCALL_OBJ(timer, K_OBJ_TIMER));
 	return z_impl_k_timer_user_data_get(timer);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_timer_user_data_get_mrsh.c>
+#endif
 
 static inline void z_vrfy_k_timer_user_data_set(struct k_timer *timer,
 						void *user_data)
@@ -340,7 +354,9 @@ static inline void z_vrfy_k_timer_user_data_set(struct k_timer *timer,
 	K_OOPS(K_SYSCALL_OBJ(timer, K_OBJ_TIMER));
 	z_impl_k_timer_user_data_set(timer, user_data);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_timer_user_data_set_mrsh.c>
+#endif
 
 #endif /* CONFIG_USERSPACE */
 

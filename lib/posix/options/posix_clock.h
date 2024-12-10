@@ -14,6 +14,8 @@
 
 __syscall int __posix_clock_get_base(clockid_t clock_id, struct timespec *ts);
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/posix_clock.h>
+#endif
 
 #endif

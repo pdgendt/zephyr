@@ -50,7 +50,9 @@ static inline int z_vrfy_z_sys_mutex_kernel_lock(struct sys_mutex *mutex,
 
 	return z_impl_z_sys_mutex_kernel_lock(mutex, timeout);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/z_sys_mutex_kernel_lock_mrsh.c>
+#endif
 
 int z_impl_z_sys_mutex_kernel_unlock(struct sys_mutex *mutex)
 {
@@ -71,4 +73,6 @@ static inline int z_vrfy_z_sys_mutex_kernel_unlock(struct sys_mutex *mutex)
 
 	return z_impl_z_sys_mutex_kernel_unlock(mutex);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/z_sys_mutex_kernel_unlock_mrsh.c>
+#endif

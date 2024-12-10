@@ -54,4 +54,6 @@ static int z_vrfy_magic_syscall(unsigned int *cookie)
 	return ret;
 }
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/magic_syscall_mrsh.c>
+#endif

@@ -2070,7 +2070,9 @@ static inline int z_impl_sys_clock_hw_cycles_per_sec_runtime_get(void)
 	z_tmcvt_64(t, Z_HZ_ticks, Z_HZ_cyc, Z_CCYC, true, false)
 
 #if defined(CONFIG_TIMER_READS_ITS_FREQUENCY_AT_RUNTIME)
+#ifndef __ZPP__
 #include <zephyr/syscalls/time_units.h>
+#endif
 #endif
 
 #undef TIME_CONSTEXPR

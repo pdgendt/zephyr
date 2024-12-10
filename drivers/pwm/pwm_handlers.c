@@ -16,7 +16,9 @@ static inline int z_vrfy_pwm_set_cycles(const struct device *dev,
 	return z_impl_pwm_set_cycles((const struct device *)dev, channel,
 					 period, pulse, flags);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/pwm_set_cycles_mrsh.c>
+#endif
 
 static inline int z_vrfy_pwm_get_cycles_per_sec(const struct device *dev,
 						uint32_t channel,
@@ -27,7 +29,9 @@ static inline int z_vrfy_pwm_get_cycles_per_sec(const struct device *dev,
 	return z_impl_pwm_get_cycles_per_sec((const struct device *)dev,
 					     channel, (uint64_t *)cycles);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/pwm_get_cycles_per_sec_mrsh.c>
+#endif
 
 #ifdef CONFIG_PWM_CAPTURE
 
@@ -37,7 +41,9 @@ static inline int z_vrfy_pwm_enable_capture(const struct device *dev,
 	K_OOPS(K_SYSCALL_DRIVER_PWM(dev, enable_capture));
 	return z_impl_pwm_enable_capture((const struct device *)dev, channel);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/pwm_enable_capture_mrsh.c>
+#endif
 
 static inline int z_vrfy_pwm_disable_capture(const struct device *dev,
 					     uint32_t channel)
@@ -45,7 +51,9 @@ static inline int z_vrfy_pwm_disable_capture(const struct device *dev,
 	K_OOPS(K_SYSCALL_DRIVER_PWM(dev, disable_capture));
 	return z_impl_pwm_disable_capture((const struct device *)dev, channel);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/pwm_disable_capture_mrsh.c>
+#endif
 
 static inline int z_vrfy_pwm_capture_cycles(const struct device *dev,
 					    uint32_t channel, pwm_flags_t flags,
@@ -75,6 +83,8 @@ static inline int z_vrfy_pwm_capture_cycles(const struct device *dev,
 
 	return err;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/pwm_capture_cycles_mrsh.c>
+#endif
 
 #endif /* CONFIG_PWM_CAPTURE */

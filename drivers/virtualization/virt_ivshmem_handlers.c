@@ -16,7 +16,9 @@ static inline size_t z_vrfy_ivshmem_get_mem(const struct device *dev,
 
 	return z_impl_ivshmem_get_mem(dev, memmap);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/ivshmem_get_mem_mrsh.c>
+#endif
 
 static inline uint32_t z_vrfy_ivshmem_get_id(const struct device *dev)
 {
@@ -24,7 +26,9 @@ static inline uint32_t z_vrfy_ivshmem_get_id(const struct device *dev)
 
 	return z_impl_ivshmem_get_id(dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/ivshmem_get_id_mrsh.c>
+#endif
 
 static inline uint16_t z_vrfy_ivshmem_get_vectors(const struct device *dev)
 {
@@ -32,7 +36,9 @@ static inline uint16_t z_vrfy_ivshmem_get_vectors(const struct device *dev)
 
 	return z_impl_ivshmem_get_vectors(dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/ivshmem_get_vectors_mrsh.c>
+#endif
 
 static inline int z_vrfy_ivshmem_int_peer(const struct device *dev,
 					  uint32_t peer_id, uint16_t vector)
@@ -41,7 +47,9 @@ static inline int z_vrfy_ivshmem_int_peer(const struct device *dev,
 
 	return z_impl_ivshmem_int_peer(dev, peer_id, vector);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/ivshmem_int_peer_mrsh.c>
+#endif
 
 static inline int z_vrfy_ivshmem_register_handler(const struct device *dev,
 						  struct k_poll_signal *signal,
@@ -52,7 +60,9 @@ static inline int z_vrfy_ivshmem_register_handler(const struct device *dev,
 
 	return z_impl_ivshmem_register_handler(dev, signal, vector);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/ivshmem_register_handler_mrsh.c>
+#endif
 
 #ifdef CONFIG_IVSHMEM_V2
 
@@ -64,7 +74,9 @@ static inline size_t z_vrfy_ivshmem_get_rw_mem_section(const struct device *dev,
 
 	return z_impl_ivshmem_get_rw_mem_section(dev, memmap);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/ivshmem_get_rw_mem_section_mrsh.c>
+#endif
 
 static inline size_t z_vrfy_ivshmem_get_output_mem_section(const struct device *dev,
 							   uint32_t peer_id,
@@ -75,7 +87,9 @@ static inline size_t z_vrfy_ivshmem_get_output_mem_section(const struct device *
 
 	return z_impl_ivshmem_get_output_mem_section(dev, peer_id, memmap);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/ivshmem_get_output_mem_section_mrsh.c>
+#endif
 
 static inline uint32_t z_vrfy_ivshmem_get_state(const struct device *dev,
 						uint32_t peer_id)
@@ -84,7 +98,9 @@ static inline uint32_t z_vrfy_ivshmem_get_state(const struct device *dev,
 
 	return z_impl_ivshmem_get_state(dev, peer_id);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/ivshmem_get_state_mrsh.c>
+#endif
 
 static inline int z_vrfy_ivshmem_set_state(const struct device *dev,
 					   uint32_t state)
@@ -93,7 +109,9 @@ static inline int z_vrfy_ivshmem_set_state(const struct device *dev,
 
 	return z_impl_ivshmem_set_state(dev, state);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/ivshmem_set_state_mrsh.c>
+#endif
 
 static inline uint32_t z_vrfy_ivshmem_get_max_peers(const struct device *dev)
 {
@@ -101,7 +119,9 @@ static inline uint32_t z_vrfy_ivshmem_get_max_peers(const struct device *dev)
 
 	return z_impl_ivshmem_get_max_peers(dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/ivshmem_get_max_peers_mrsh.c>
+#endif
 
 static inline uint16_t z_vrfy_ivshmem_get_protocol(const struct device *dev)
 {
@@ -109,7 +129,9 @@ static inline uint16_t z_vrfy_ivshmem_get_protocol(const struct device *dev)
 
 	return z_impl_ivshmem_get_protocol(dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/ivshmem_get_protocol_mrsh.c>
+#endif
 
 static inline int z_vrfy_ivshmem_enable_interrupts(const struct device *dev,
 						   bool enable)
@@ -118,6 +140,8 @@ static inline int z_vrfy_ivshmem_enable_interrupts(const struct device *dev,
 
 	return z_impl_ivshmem_enable_interrupts(dev, enable);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/ivshmem_enable_interrupts_mrsh.c>
+#endif
 
 #endif /* CONFIG_IVSHMEM_V2 */

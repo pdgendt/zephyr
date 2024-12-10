@@ -471,6 +471,8 @@ static inline int z_impl_stepper_set_event_callback(const struct device *dev,
 }
 #endif
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/stepper.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_STEPPER_H_ */

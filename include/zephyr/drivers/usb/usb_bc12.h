@@ -184,6 +184,8 @@ static inline int z_impl_bc12_set_result_cb(const struct device *dev, bc12_callb
  * @}
  */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/usb_bc12.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_USB_USB_BC12_H_ */

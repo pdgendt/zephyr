@@ -115,7 +115,9 @@ void xtensa_arch_kernel_oops(int reason_p, void *ssf);
 
 __syscall void xtensa_user_fault(unsigned int reason);
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/arch.h>
+#endif
 
 /* internal routine documented in C file, needed by IRQ_CONNECT() macro */
 void z_irq_priority_set(uint32_t irq, uint32_t prio, uint32_t flags);

@@ -79,7 +79,9 @@ int z_vrfy_k_sem_init(struct k_sem *sem, unsigned int initial_count,
 	K_OOPS(K_SYSCALL_OBJ_INIT(sem, K_OBJ_SEM));
 	return z_impl_k_sem_init(sem, initial_count, limit);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_sem_init_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 static inline bool handle_poll_events(struct k_sem *sem)
@@ -126,7 +128,9 @@ static inline void z_vrfy_k_sem_give(struct k_sem *sem)
 	K_OOPS(K_SYSCALL_OBJ(sem, K_OBJ_SEM));
 	z_impl_k_sem_give(sem);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_sem_give_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 int z_impl_k_sem_take(struct k_sem *sem, k_timeout_t timeout)
@@ -191,21 +195,27 @@ static inline int z_vrfy_k_sem_take(struct k_sem *sem, k_timeout_t timeout)
 	K_OOPS(K_SYSCALL_OBJ(sem, K_OBJ_SEM));
 	return z_impl_k_sem_take(sem, timeout);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_sem_take_mrsh.c>
+#endif
 
 static inline void z_vrfy_k_sem_reset(struct k_sem *sem)
 {
 	K_OOPS(K_SYSCALL_OBJ(sem, K_OBJ_SEM));
 	z_impl_k_sem_reset(sem);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_sem_reset_mrsh.c>
+#endif
 
 static inline unsigned int z_vrfy_k_sem_count_get(struct k_sem *sem)
 {
 	K_OOPS(K_SYSCALL_OBJ(sem, K_OBJ_SEM));
 	return z_impl_k_sem_count_get(sem);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_sem_count_get_mrsh.c>
+#endif
 
 #endif /* CONFIG_USERSPACE */
 

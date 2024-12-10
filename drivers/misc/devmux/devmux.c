@@ -96,7 +96,9 @@ int z_vrfy_devmux_select_get(const struct device *dev)
 {
 	return z_impl_devmux_select_get(dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/devmux_select_get_mrsh.c>
+#endif
 #endif
 
 int z_impl_devmux_select_set(struct device *dev, size_t index)
@@ -126,7 +128,9 @@ int z_vrfy_devmux_select_set(struct device *dev, size_t index)
 {
 	return z_impl_devmux_select_set(dev, index);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/devmux_select_set_mrsh.c>
+#endif
 #endif
 
 static int devmux_init(struct device *const dev)

@@ -12,21 +12,27 @@ static inline int z_vrfy_bbram_check_invalid(const struct device *dev)
 	K_OOPS(K_SYSCALL_OBJ(dev, K_OBJ_DRIVER_BBRAM));
 	return z_impl_bbram_check_invalid(dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/bbram_check_invalid_mrsh.c>
+#endif
 
 static inline int z_vrfy_bbram_check_standby_power(const struct device *dev)
 {
 	K_OOPS(K_SYSCALL_OBJ(dev, K_OBJ_DRIVER_BBRAM));
 	return z_impl_bbram_check_standby_power(dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/bbram_check_standby_power_mrsh.c>
+#endif
 
 static inline int z_vrfy_bbram_check_power(const struct device *dev)
 {
 	K_OOPS(K_SYSCALL_OBJ(dev, K_OBJ_DRIVER_BBRAM));
 	return z_impl_bbram_check_power(dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/bbram_check_power_mrsh.c>
+#endif
 
 static inline int z_vrfy_bbram_get_size(const struct device *dev, size_t *size)
 {
@@ -34,7 +40,9 @@ static inline int z_vrfy_bbram_get_size(const struct device *dev, size_t *size)
 	K_OOPS(K_SYSCALL_MEMORY_WRITE(size, sizeof(size_t)));
 	return z_impl_bbram_get_size(dev, size);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/bbram_get_size_mrsh.c>
+#endif
 
 static inline int z_vrfy_bbram_read(const struct device *dev, size_t offset,
 				    size_t size, uint8_t *data)
@@ -43,7 +51,9 @@ static inline int z_vrfy_bbram_read(const struct device *dev, size_t offset,
 	K_OOPS(K_SYSCALL_MEMORY_WRITE(data, size));
 	return z_impl_bbram_read(dev, offset, size, data);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/bbram_read_mrsh.c>
+#endif
 
 static inline int z_vrfy_bbram_write(const struct device *dev, size_t offset,
 				     size_t size, const uint8_t *data)
@@ -52,4 +62,6 @@ static inline int z_vrfy_bbram_write(const struct device *dev, size_t offset,
 	K_OOPS(K_SYSCALL_MEMORY_READ(data, size));
 	return z_impl_bbram_write(dev, offset, size, data);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/bbram_write_mrsh.c>
+#endif

@@ -38,6 +38,8 @@ static inline void z_impl_abstract_do_that(const struct device *dev, unsigned in
 	DEVICE_API_GET(abstract, dev)->do_that(dev, baz);
 }
 
-#include <syscalls/abstract_driver.h>
+#ifndef __ZPP__
+#include <zephyr/syscalls/abstract_driver.h>
+#endif
 
 #endif /* _ABSTRACT_DRIVER_H_ */

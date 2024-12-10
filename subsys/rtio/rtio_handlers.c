@@ -57,7 +57,9 @@ static inline void z_vrfy_rtio_release_buffer(struct rtio *r, void *buff, uint32
 	K_OOPS(K_SYSCALL_OBJ(r, K_OBJ_RTIO));
 	z_impl_rtio_release_buffer(r, buff, buff_len);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/rtio_release_buffer_mrsh.c>
+#endif
 
 static inline int z_vrfy_rtio_cqe_get_mempool_buffer(const struct rtio *r, struct rtio_cqe *cqe,
 						     uint8_t **buff, uint32_t *buff_len)
@@ -68,13 +70,17 @@ static inline int z_vrfy_rtio_cqe_get_mempool_buffer(const struct rtio *r, struc
 	K_OOPS(K_SYSCALL_MEMORY_READ(buff_len, sizeof(uint32_t)));
 	return z_impl_rtio_cqe_get_mempool_buffer(r, cqe, buff, buff_len);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/rtio_cqe_get_mempool_buffer_mrsh.c>
+#endif
 
 static inline int z_vrfy_rtio_sqe_cancel(struct rtio_sqe *sqe)
 {
 	return z_impl_rtio_sqe_cancel(sqe);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/rtio_sqe_cancel_mrsh.c>
+#endif
 
 static inline int z_vrfy_rtio_sqe_copy_in_get_handles(struct rtio *r, const struct rtio_sqe *sqes,
 						      struct rtio_sqe **handle, size_t sqe_count)
@@ -107,7 +113,9 @@ static inline int z_vrfy_rtio_sqe_copy_in_get_handles(struct rtio *r, const stru
 	/* Already copied *and* verified, no need to redo */
 	return z_impl_rtio_sqe_copy_in_get_handles(r, NULL, NULL, 0);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/rtio_sqe_copy_in_get_handles_mrsh.c>
+#endif
 
 static inline int z_vrfy_rtio_cqe_copy_out(struct rtio *r,
 					   struct rtio_cqe *cqes,
@@ -120,7 +128,9 @@ static inline int z_vrfy_rtio_cqe_copy_out(struct rtio *r,
 
 	return z_impl_rtio_cqe_copy_out(r, cqes, cqe_count, timeout);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/rtio_cqe_copy_out_mrsh.c>
+#endif
 
 static inline int z_vrfy_rtio_submit(struct rtio *r, uint32_t wait_count)
 {
@@ -132,4 +142,6 @@ static inline int z_vrfy_rtio_submit(struct rtio *r, uint32_t wait_count)
 
 	return z_impl_rtio_submit(r, wait_count);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/rtio_submit_mrsh.c>
+#endif

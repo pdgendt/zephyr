@@ -467,6 +467,8 @@ static inline bool led_is_ready_dt(const struct led_dt_spec *spec)
 }
 #endif
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/led.h>
+#endif
 
 #endif	/* ZEPHYR_INCLUDE_DRIVERS_LED_H_ */

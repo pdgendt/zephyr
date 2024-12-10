@@ -21,5 +21,7 @@ static inline int z_vrfy_foo(int bar)
 	/* Nothing to verify */
 	return z_impl_foo(bar);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/foo_mrsh.c>
+#endif
 #endif

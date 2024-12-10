@@ -1744,6 +1744,8 @@ static inline bool can_frame_matches_filter(const struct can_frame *frame,
 }
 #endif
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/can.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_CAN_H_ */

@@ -36,7 +36,7 @@ def process_command(command: str, file: Path, directory: Path):
     print(f"zpp {file}", directory / f"{args.output}.i")
 
     # Generate the source code as produced by the preprocessor
-    src = subprocess.check_output(command_remaining + ["-E", "-P", "-D__ZEPHYRPP__"]).decode()
+    src = subprocess.check_output(command_remaining + ["-E", "-P", "-D__ZPP__"]).decode()
 
     # debug only
     with open(directory / f"{args.output}.i", "w") as fp:

@@ -815,6 +815,8 @@ static inline int z_impl_auxdisplay_custom_command(const struct device *dev,
  * @}
  */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/auxdisplay.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_AUXDISPLAY_H_ */

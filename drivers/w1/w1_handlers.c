@@ -13,7 +13,9 @@ static inline int z_vrfy_w1_reset_bus(const struct device *dev)
 
 	return z_impl_w1_reset_bus((const struct device *)dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/w1_reset_bus_mrsh.c>
+#endif
 
 static inline int z_vrfy_w1_read_bit(const struct device *dev)
 {
@@ -21,7 +23,9 @@ static inline int z_vrfy_w1_read_bit(const struct device *dev)
 
 	return z_impl_w1_read_bit((const struct device *)dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/w1_read_bit_mrsh.c>
+#endif
 
 static inline int z_vrfy_w1_write_bit(const struct device *dev, bool bit)
 {
@@ -29,7 +33,9 @@ static inline int z_vrfy_w1_write_bit(const struct device *dev, bool bit)
 
 	return z_impl_w1_write_bit((const struct device *)dev, bit);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/w1_write_bit_mrsh.c>
+#endif
 
 static inline int z_vrfy_w1_read_byte(const struct device *dev)
 {
@@ -37,7 +43,9 @@ static inline int z_vrfy_w1_read_byte(const struct device *dev)
 
 	return z_impl_w1_read_byte((const struct device *)dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/w1_read_byte_mrsh.c>
+#endif
 
 static inline int z_vrfy_w1_write_byte(const struct device *dev, uint8_t byte)
 {
@@ -45,7 +53,9 @@ static inline int z_vrfy_w1_write_byte(const struct device *dev, uint8_t byte)
 
 	return z_impl_w1_write_byte((const struct device *)dev, (uint8_t)byte);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/w1_write_byte_mrsh.c>
+#endif
 
 static inline int z_vrfy_w1_read_block(const struct device *dev,
 				       uint8_t *buffer, size_t len)
@@ -56,7 +66,9 @@ static inline int z_vrfy_w1_read_block(const struct device *dev,
 	return z_impl_w1_read_block((const struct device *)dev,
 				    (uint8_t *)buffer, (size_t)len);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/w1_read_block_mrsh.c>
+#endif
 
 static inline int z_vrfy_w1_write_block(const struct device *dev,
 					const uint8_t *buffer, size_t len)
@@ -67,7 +79,9 @@ static inline int z_vrfy_w1_write_block(const struct device *dev,
 	return z_impl_w1_write_block((const struct device *)dev,
 				     (const uint8_t *)buffer, (size_t)len);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/w1_write_block_mrsh.c>
+#endif
 
 static inline int z_vrfy_w1_change_bus_lock(const struct device *dev, bool lock)
 {
@@ -75,7 +89,9 @@ static inline int z_vrfy_w1_change_bus_lock(const struct device *dev, bool lock)
 
 	return z_impl_w1_change_bus_lock((const struct device *)dev, lock);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/w1_change_bus_lock_mrsh.c>
+#endif
 
 static inline int z_vrfy_w1_configure(const struct device *dev,
 				      enum w1_settings_type type, uint32_t value)
@@ -84,7 +100,9 @@ static inline int z_vrfy_w1_configure(const struct device *dev,
 
 	return z_impl_w1_configure(dev, type, value);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/w1_configure_mrsh.c>
+#endif
 
 static inline size_t z_vrfy_w1_get_slave_count(const struct device *dev)
 {
@@ -92,7 +110,9 @@ static inline size_t z_vrfy_w1_get_slave_count(const struct device *dev)
 
 	return z_impl_w1_get_slave_count((const struct device *)dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/w1_get_slave_count_mrsh.c>
+#endif
 
 #if CONFIG_W1_NET
 static inline int z_vrfy_w1_search_bus(const struct device *dev,
@@ -112,5 +132,7 @@ static inline int z_vrfy_w1_search_bus(const struct device *dev,
 				    (void *)user_data);
 }
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/w1_search_bus_mrsh.c>
+#endif
 #endif /* CONFIG_W1_NET */

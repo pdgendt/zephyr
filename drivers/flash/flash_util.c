@@ -198,5 +198,7 @@ int z_vrfy_flash_copy(const struct device *src_dev, off_t src_offset, const stru
 	K_OOPS(K_SYSCALL_MEMORY_WRITE(buf, buf_size));
 	return z_impl_flash_copy(src_dev, src_offset, dst_dev, dst_offset, size, buf, buf_size);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/flash_copy_mrsh.c>
+#endif
 #endif

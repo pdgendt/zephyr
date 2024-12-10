@@ -363,7 +363,9 @@ out:
 	return ret;
 }
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/zsock_socketpair_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 /**

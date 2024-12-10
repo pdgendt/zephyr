@@ -74,7 +74,9 @@ static inline int32_t z_vrfy_k_stack_alloc_init(struct k_stack *stack,
 					&total_size)));
 	return z_impl_k_stack_alloc_init(stack, num_entries);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_stack_alloc_init_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 int k_stack_cleanup(struct k_stack *stack)
@@ -142,7 +144,9 @@ static inline int z_vrfy_k_stack_push(struct k_stack *stack, stack_data_t data)
 
 	return z_impl_k_stack_push(stack, data);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_stack_push_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 int z_impl_k_stack_pop(struct k_stack *stack, stack_data_t *data,
@@ -197,7 +201,9 @@ static inline int z_vrfy_k_stack_pop(struct k_stack *stack,
 	K_OOPS(K_SYSCALL_MEMORY_WRITE(data, sizeof(stack_data_t)));
 	return z_impl_k_stack_pop(stack, data, timeout);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_stack_pop_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 #ifdef CONFIG_OBJ_CORE_STACK

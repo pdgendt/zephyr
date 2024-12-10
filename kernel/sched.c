@@ -521,7 +521,9 @@ static inline void z_vrfy_k_thread_suspend(k_tid_t thread)
 	K_OOPS(K_SYSCALL_OBJ(thread, K_OBJ_THREAD));
 	z_impl_k_thread_suspend(thread);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_thread_suspend_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 void z_impl_k_thread_resume(k_tid_t thread)
@@ -550,7 +552,9 @@ static inline void z_vrfy_k_thread_resume(k_tid_t thread)
 	K_OOPS(K_SYSCALL_OBJ(thread, K_OBJ_THREAD));
 	z_impl_k_thread_resume(thread);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_thread_resume_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 static void unready_thread(struct k_thread *thread)
@@ -1007,7 +1011,9 @@ static inline void z_vrfy_k_thread_priority_set(k_tid_t thread, int prio)
 #endif /* CONFIG_USERSPACE_THREAD_MAY_RAISE_PRIORITY */
 	z_impl_k_thread_priority_set(thread, prio);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_thread_priority_set_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 #ifdef CONFIG_SCHED_DEADLINE
@@ -1048,7 +1054,9 @@ static inline void z_vrfy_k_thread_deadline_set(k_tid_t tid, int deadline)
 
 	z_impl_k_thread_deadline_set((k_tid_t)thread, deadline);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_thread_deadline_set_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 #endif /* CONFIG_SCHED_DEADLINE */
 
@@ -1080,7 +1088,9 @@ static inline void z_vrfy_k_yield(void)
 {
 	z_impl_k_yield();
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_yield_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 static int32_t z_tick_sleep(k_ticks_t ticks)
@@ -1162,7 +1172,9 @@ static inline int32_t z_vrfy_k_sleep(k_timeout_t timeout)
 {
 	return z_impl_k_sleep(timeout);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_sleep_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 int32_t z_impl_k_usleep(int32_t us)
@@ -1186,7 +1198,9 @@ static inline int32_t z_vrfy_k_usleep(int32_t us)
 {
 	return z_impl_k_usleep(us);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_usleep_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 void z_impl_k_wakeup(k_tid_t thread)
@@ -1225,7 +1239,9 @@ static inline void z_vrfy_k_wakeup(k_tid_t thread)
 	K_OOPS(K_SYSCALL_OBJ(thread, K_OBJ_THREAD));
 	z_impl_k_wakeup(thread);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_wakeup_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 k_tid_t z_impl_k_sched_current_thread_query(void)
@@ -1238,7 +1254,9 @@ static inline k_tid_t z_vrfy_k_sched_current_thread_query(void)
 {
 	return z_impl_k_sched_current_thread_query();
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_sched_current_thread_query_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 static inline void unpend_all(_wait_q_t *wait_q)
@@ -1461,7 +1479,9 @@ static inline int z_vrfy_k_thread_join(struct k_thread *thread,
 
 	return z_impl_k_thread_join(thread, timeout);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_thread_join_mrsh.c>
+#endif
 
 static inline void z_vrfy_k_thread_abort(k_tid_t thread)
 {
@@ -1474,7 +1494,9 @@ static inline void z_vrfy_k_thread_abort(k_tid_t thread)
 
 	z_impl_k_thread_abort((struct k_thread *)thread);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_thread_abort_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 /*

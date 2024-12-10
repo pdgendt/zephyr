@@ -15,7 +15,9 @@ static inline int z_vrfy_smbus_configure(const struct device *dev,
 
 	return z_impl_smbus_configure(dev, dev_config);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/smbus_configure_mrsh.c>
+#endif
 
 static inline int z_vrfy_smbus_get_config(const struct device *dev,
 					  uint32_t *dev_config)
@@ -25,7 +27,9 @@ static inline int z_vrfy_smbus_get_config(const struct device *dev,
 
 	return z_impl_smbus_get_config(dev, dev_config);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/smbus_get_config_mrsh.c>
+#endif
 
 static inline int z_vrfy_smbus_quick(const struct device *dev, uint16_t addr,
 				     enum smbus_direction rw)
@@ -34,7 +38,9 @@ static inline int z_vrfy_smbus_quick(const struct device *dev, uint16_t addr,
 
 	return z_impl_smbus_quick(dev, addr, rw);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/smbus_quick_mrsh.c>
+#endif
 
 static inline int z_vrfy_smbus_byte_write(const struct device *dev,
 					  uint16_t addr, uint8_t byte)
@@ -43,7 +49,9 @@ static inline int z_vrfy_smbus_byte_write(const struct device *dev,
 
 	return z_impl_smbus_byte_write(dev, addr, byte);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/smbus_byte_write_mrsh.c>
+#endif
 
 static inline int z_vrfy_smbus_byte_read(const struct device *dev,
 					 uint16_t addr, uint8_t *byte)
@@ -53,7 +61,9 @@ static inline int z_vrfy_smbus_byte_read(const struct device *dev,
 
 	return z_impl_smbus_byte_read(dev, addr, byte);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/smbus_byte_read_mrsh.c>
+#endif
 
 static inline int z_vrfy_smbus_byte_data_write(const struct device *dev,
 					       uint16_t addr, uint8_t cmd,
@@ -63,7 +73,9 @@ static inline int z_vrfy_smbus_byte_data_write(const struct device *dev,
 
 	return z_impl_smbus_byte_data_write(dev, addr, cmd, byte);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/smbus_byte_data_write_mrsh.c>
+#endif
 
 static inline int z_vrfy_smbus_byte_data_read(const struct device *dev,
 					       uint16_t addr, uint8_t cmd,
@@ -74,7 +86,9 @@ static inline int z_vrfy_smbus_byte_data_read(const struct device *dev,
 
 	return z_impl_smbus_byte_data_read(dev, addr, cmd, byte);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/smbus_byte_data_read_mrsh.c>
+#endif
 
 static inline int z_vrfy_smbus_word_data_write(const struct device *dev,
 					       uint16_t addr, uint8_t cmd,
@@ -84,7 +98,9 @@ static inline int z_vrfy_smbus_word_data_write(const struct device *dev,
 
 	return z_impl_smbus_word_data_write(dev, addr, cmd, word);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/smbus_word_data_write_mrsh.c>
+#endif
 
 static inline int z_vrfy_smbus_word_data_read(const struct device *dev,
 					      uint16_t addr, uint8_t cmd,
@@ -95,7 +111,9 @@ static inline int z_vrfy_smbus_word_data_read(const struct device *dev,
 
 	return z_impl_smbus_word_data_read(dev, addr, cmd, word);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/smbus_word_data_read_mrsh.c>
+#endif
 
 static inline int z_vrfy_smbus_pcall(const struct device *dev,
 				     uint16_t addr, uint8_t cmd,
@@ -106,7 +124,9 @@ static inline int z_vrfy_smbus_pcall(const struct device *dev,
 
 	return z_impl_smbus_pcall(dev, addr, cmd, send_word, recv_word);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/smbus_pcall_mrsh.c>
+#endif
 
 static inline int z_vrfy_smbus_block_write(const struct device *dev,
 					   uint16_t addr, uint8_t cmd,
@@ -117,7 +137,9 @@ static inline int z_vrfy_smbus_block_write(const struct device *dev,
 
 	return z_impl_smbus_block_write(dev, addr, cmd, count, buf);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/smbus_block_write_mrsh.c>
+#endif
 
 static inline int z_vrfy_smbus_block_read(const struct device *dev,
 					  uint16_t addr, uint8_t cmd,
@@ -128,7 +150,9 @@ static inline int z_vrfy_smbus_block_read(const struct device *dev,
 
 	return z_impl_smbus_block_read(dev, addr, cmd, count, buf);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/smbus_block_read_mrsh.c>
+#endif
 
 static inline int z_vrfy_smbus_block_pcall(const struct device *dev,
 					   uint16_t addr, uint8_t cmd,
@@ -142,7 +166,9 @@ static inline int z_vrfy_smbus_block_pcall(const struct device *dev,
 	return z_impl_smbus_block_pcall(dev, addr, cmd, snd_count, snd_buf,
 					rcv_count, rcv_buf);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/smbus_block_pcall_mrsh.c>
+#endif
 
 static inline int z_vrfy_smbus_smbalert_remove_cb(const struct device *dev,
 						  struct smbus_callback *cb)
@@ -151,7 +177,9 @@ static inline int z_vrfy_smbus_smbalert_remove_cb(const struct device *dev,
 
 	return z_impl_smbus_smbalert_remove_cb(dev, cb);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/smbus_smbalert_remove_cb_mrsh.c>
+#endif
 
 static inline int z_vrfy_smbus_host_notify_remove_cb(const struct device *dev,
 						     struct smbus_callback *cb)
@@ -160,4 +188,6 @@ static inline int z_vrfy_smbus_host_notify_remove_cb(const struct device *dev,
 
 	return z_impl_smbus_host_notify_remove_cb(dev, cb);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/smbus_host_notify_remove_cb_mrsh.c>
+#endif

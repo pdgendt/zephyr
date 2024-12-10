@@ -127,6 +127,8 @@ static inline int entropy_get_entropy_isr(const struct device *dev,
  * @}
  */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/entropy.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_ENTROPY_H_ */

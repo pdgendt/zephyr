@@ -196,7 +196,9 @@ static inline int z_vrfy_zephyr_read_stdin(char *buf, int nbytes)
 	K_OOPS(K_SYSCALL_MEMORY_WRITE(buf, nbytes));
 	return z_impl_zephyr_read_stdin((char *)buf, nbytes);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zephyr_read_stdin_mrsh.c>
+#endif
 #endif
 
 int z_impl_zephyr_write_stdout(const void *buffer, int nbytes)
@@ -219,7 +221,9 @@ static inline int z_vrfy_zephyr_write_stdout(const void *buf, int nbytes)
 	K_OOPS(K_SYSCALL_MEMORY_READ(buf, nbytes));
 	return z_impl_zephyr_write_stdout((const void *)buf, nbytes);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zephyr_write_stdout_mrsh.c>
+#endif
 #endif
 
 #ifndef CONFIG_POSIX_DEVICE_IO

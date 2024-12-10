@@ -239,7 +239,9 @@ void z_vrfy_dump_my_ptables(void)
 {
 	z_impl_dump_my_ptables();
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/dump_my_ptables_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 void dump_pagetables(void)

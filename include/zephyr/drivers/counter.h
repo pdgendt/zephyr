@@ -678,6 +678,8 @@ static inline uint32_t z_impl_counter_get_guard_period(const struct device *dev,
  * @}
  */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/counter.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_COUNTER_H_ */

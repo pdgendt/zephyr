@@ -1680,6 +1680,8 @@ static inline int i2c_reg_update_byte_dt(const struct i2c_dt_spec *spec,
  * @}
  */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/i2c.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_I2C_H_ */

@@ -454,6 +454,8 @@ static inline int z_impl_gnss_get_latest_timepulse(const struct device *dev,
 }
 #endif
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/gnss.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_GNSS_H_ */

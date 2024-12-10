@@ -10,6 +10,8 @@
 
 __syscall void blow_up_priv_stack(void);
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/test_syscalls.h>
+#endif
 
 #endif /* _TEST_SYSCALLS_H_ */

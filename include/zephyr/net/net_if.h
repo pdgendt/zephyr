@@ -3515,7 +3515,9 @@ extern int net_stats_prometheus_scrape(struct prometheus_collector *collector,
 }
 #endif
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/net_if.h>
+#endif
 
 /**
  * @}

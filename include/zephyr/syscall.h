@@ -9,6 +9,7 @@
 #define ZEPHYR_INCLUDE_SYSCALL_H_
 
 #include <zephyr/syscall_list.h>
+//
 #include <zephyr/arch/syscall.h>
 #include <stdbool.h>
 

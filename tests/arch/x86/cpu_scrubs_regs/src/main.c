@@ -54,7 +54,9 @@ static inline void z_vrfy_test_cpu_write_reg(void)
 {
 	z_impl_test_cpu_write_reg();
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/test_cpu_write_reg_mrsh.c>
+#endif
 
 /**
  * @brief Test CPU scrubs registers after system call

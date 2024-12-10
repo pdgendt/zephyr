@@ -29,7 +29,7 @@
  * Use C23 attributes with our own prefix to make sure the C preprocessor
  * has content for the annotations.
  */
-#ifdef __ZEPHYRPP__
+#ifdef __ZPP__
 #define __annotate(x) [[zephyr::x]]
 #else
 #define __annotate(x)

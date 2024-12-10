@@ -91,6 +91,8 @@ static inline ssize_t z_vrfy_llext_get_fn_table(struct llext *ext, bool is_init,
 
 	return z_impl_llext_get_fn_table(ext, is_init, buf, size);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/llext_get_fn_table_mrsh.c>
+#endif
 
 #endif /* CONFIG_USERSPACE */

@@ -19,7 +19,9 @@ static inline int z_vrfy_espi_config(const struct device *dev,
 
 	return z_impl_espi_config(dev, &cfg_copy);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/espi_config_mrsh.c>
+#endif
 
 static inline bool z_vrfy_espi_get_channel_status(const struct device *dev,
 						  enum espi_channel ch)
@@ -28,7 +30,9 @@ static inline bool z_vrfy_espi_get_channel_status(const struct device *dev,
 
 	return z_impl_espi_get_channel_status(dev, ch);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/espi_get_channel_status_mrsh.c>
+#endif
 
 static inline int z_vrfy_espi_read_lpc_request(const struct device *dev,
 					       enum lpc_peripheral_opcode op,
@@ -44,7 +48,9 @@ static inline int z_vrfy_espi_read_lpc_request(const struct device *dev,
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/espi_read_lpc_request_mrsh.c>
+#endif
 
 static inline int z_vrfy_espi_write_lpc_request(const struct device *dev,
 						enum lpc_peripheral_opcode op,
@@ -57,7 +63,9 @@ static inline int z_vrfy_espi_write_lpc_request(const struct device *dev,
 
 	return z_impl_espi_write_lpc_request(dev, op, &data_copy);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/espi_write_lpc_request_mrsh.c>
+#endif
 
 static inline int z_vrfy_espi_send_vwire(const struct device *dev,
 					 enum espi_vwire_signal signal,
@@ -67,7 +75,9 @@ static inline int z_vrfy_espi_send_vwire(const struct device *dev,
 
 	return z_impl_espi_send_vwire(dev, signal, level);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/espi_send_vwire_mrsh.c>
+#endif
 
 static inline int z_vrfy_espi_receive_vwire(const struct device *dev,
 					    enum espi_vwire_signal signal,
@@ -83,7 +93,9 @@ static inline int z_vrfy_espi_receive_vwire(const struct device *dev,
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/espi_receive_vwire_mrsh.c>
+#endif
 
 static inline int z_vrfy_espi_read_request(const struct device *dev,
 					   struct espi_request_packet *req)
@@ -103,7 +115,9 @@ static inline int z_vrfy_espi_read_request(const struct device *dev,
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/espi_read_request_mrsh.c>
+#endif
 
 static inline int z_vrfy_espi_write_request(const struct device *dev,
 					    struct espi_request_packet *req)
@@ -120,7 +134,9 @@ static inline int z_vrfy_espi_write_request(const struct device *dev,
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/espi_write_request_mrsh.c>
+#endif
 
 static inline int z_vrfy_espi_send_oob(const struct device *dev,
 				       struct espi_oob_packet *pckt)
@@ -137,7 +153,9 @@ static inline int z_vrfy_espi_send_oob(const struct device *dev,
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/espi_send_oob_mrsh.c>
+#endif
 
 static inline int z_vrfy_espi_receive_oob(const struct device *dev,
 					  struct espi_oob_packet *pckt)
@@ -156,7 +174,9 @@ static inline int z_vrfy_espi_receive_oob(const struct device *dev,
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/espi_receive_oob_mrsh.c>
+#endif
 
 static inline int z_vrfy_espi_read_flash(const struct device *dev,
 					 struct espi_flash_packet *pckt)
@@ -175,7 +195,9 @@ static inline int z_vrfy_espi_read_flash(const struct device *dev,
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/espi_read_flash_mrsh.c>
+#endif
 
 static inline int z_vrfy_espi_write_flash(const struct device *dev,
 					  struct espi_flash_packet *pckt)
@@ -192,7 +214,9 @@ static inline int z_vrfy_espi_write_flash(const struct device *dev,
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/espi_write_flash_mrsh.c>
+#endif
 
 static inline int z_vrfy_espi_flash_erase(const struct device *dev,
 					  struct espi_flash_packet *pckt)
@@ -209,4 +233,6 @@ static inline int z_vrfy_espi_flash_erase(const struct device *dev,
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/espi_flash_erase_mrsh.c>
+#endif

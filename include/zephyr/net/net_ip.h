@@ -1852,7 +1852,9 @@ static inline int net_ipv6_pe_del_filter(struct in6_addr *addr)
 }
 #endif
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/net_ip.h>
+#endif
 
 /**
  * @}

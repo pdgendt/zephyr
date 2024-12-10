@@ -505,7 +505,9 @@ uint32_t z_vrfy_log_filter_set(struct log_backend const *const backend,
 
 	return z_impl_log_filter_set(NULL, domain_id, src_id, level);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/log_filter_set_mrsh.c>
+#endif
 #endif
 
 static void link_filter_set(const struct log_link *link,

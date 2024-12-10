@@ -15,7 +15,9 @@ static inline int z_vrfy_peci_config(const struct device *dev,
 
 	return z_impl_peci_config(dev, bitrate);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/peci_config_mrsh.c>
+#endif
 
 static inline int z_vrfy_peci_enable(const struct device *dev)
 {
@@ -23,7 +25,9 @@ static inline int z_vrfy_peci_enable(const struct device *dev)
 
 	return z_impl_peci_enable(dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/peci_enable_mrsh.c>
+#endif
 
 static inline int z_vrfy_peci_disable(const struct device *dev)
 {
@@ -31,7 +35,9 @@ static inline int z_vrfy_peci_disable(const struct device *dev)
 
 	return z_impl_peci_disable(dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/peci_disable_mrsh.c>
+#endif
 
 static inline int z_vrfy_peci_transfer(const struct device *dev,
 				       struct peci_msg *msg)
@@ -43,4 +49,6 @@ static inline int z_vrfy_peci_transfer(const struct device *dev,
 
 	return z_impl_peci_transfer(dev, &msg_copy);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/peci_transfer_mrsh.c>
+#endif

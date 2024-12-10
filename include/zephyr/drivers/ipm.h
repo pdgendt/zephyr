@@ -270,6 +270,8 @@ static inline void z_impl_ipm_complete(const struct device *ipmdev)
  * @}
  */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/ipm.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_IPM_H_ */

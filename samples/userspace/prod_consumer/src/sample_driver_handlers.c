@@ -17,7 +17,9 @@ int z_vrfy_sample_driver_state_set(const struct device *dev, bool active)
 	return z_impl_sample_driver_state_set(dev, active);
 }
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/sample_driver_state_set_mrsh.c>
+#endif
 
 int z_vrfy_sample_driver_write(const struct device *dev, void *buf)
 {
@@ -31,4 +33,6 @@ int z_vrfy_sample_driver_write(const struct device *dev, void *buf)
 
 	return z_impl_sample_driver_write(dev, buf);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/sample_driver_write_mrsh.c>
+#endif

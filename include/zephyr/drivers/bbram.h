@@ -261,6 +261,8 @@ int bbram_emul_set_power_state(const struct device *dev, bool failure);
  * @}
  */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/bbram.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_BBRAM_H */

@@ -205,7 +205,9 @@ __syscall void k_mem_paging_histogram_backing_store_page_in_get(
 __syscall void k_mem_paging_histogram_backing_store_page_out_get(
 	struct k_mem_paging_histogram_t *hist);
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/demand_paging.h>
+#endif
 
 /** @} */
 

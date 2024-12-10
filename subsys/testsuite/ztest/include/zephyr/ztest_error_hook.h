@@ -76,7 +76,9 @@ void ztest_post_assert_fail_hook(void);
 #endif
 
 #if defined(CONFIG_ZTEST_FATAL_HOOK) || defined(CONFIG_ZTEST_ASSERT_HOOK)
+#ifndef __ZPP__
 #include <zephyr/syscalls/ztest_error_hook.h>
+#endif
 #endif
 
 #endif /* ZEPHYR_INCLUDE_ZTEST_FATAL_HOOK_H_ */

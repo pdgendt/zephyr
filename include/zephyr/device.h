@@ -1240,6 +1240,8 @@ DT_FOREACH_STATUS_OKAY_NODE(Z_MAYBE_DEVICE_DECLARE_INTERNAL)
 }
 #endif
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/device.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DEVICE_H_ */

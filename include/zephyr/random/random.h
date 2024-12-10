@@ -147,5 +147,7 @@ static inline uint64_t sys_rand64_get(void)
  * @}
  */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/random.h>
+#endif
 #endif /* ZEPHYR_INCLUDE_RANDOM_RANDOM_H_ */

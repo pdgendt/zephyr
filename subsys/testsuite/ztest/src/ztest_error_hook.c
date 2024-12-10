@@ -38,7 +38,9 @@ static inline void z_vrfy_ztest_set_fault_valid(bool valid)
 {
 	z_impl_ztest_set_fault_valid(valid);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/ztest_set_fault_valid_mrsh.c>
+#endif
 #endif
 
 __weak void ztest_post_fatal_error_hook(unsigned int reason,
@@ -100,7 +102,9 @@ static inline void z_vrfy_ztest_set_assert_valid(bool valid)
 {
 	z_impl_ztest_set_assert_valid(valid);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/ztest_set_assert_valid_mrsh.c>
+#endif
 #endif
 
 __weak void ztest_post_assert_fail_hook(void)

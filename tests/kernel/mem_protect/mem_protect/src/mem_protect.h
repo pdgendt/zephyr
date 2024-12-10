@@ -93,6 +93,8 @@ static inline void set_fault_valid(bool valid)
 
 __syscall struct k_heap *ret_resource_pool_ptr(void);
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/mem_protect.h>
+#endif
 
 #endif /* _TEST_SYSCALLS_H_ */

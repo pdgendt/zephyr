@@ -16,4 +16,6 @@ __syscall int ext_syscall_ok(int a);
  */
 __syscall void ext_syscall_fail(void);
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/syscalls_ext.h>
+#endif

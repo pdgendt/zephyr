@@ -98,5 +98,7 @@ __syscall int updatehub_reboot(void);
  * @}
  */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/updatehub.h>
+#endif
 #endif /* ZEPHYR_INCLUDE_MGMT_UPDATEHUB_H_ */

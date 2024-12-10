@@ -172,7 +172,9 @@ struct net_if *z_vrfy_net_if_get_by_index(int index)
 	return iface;
 }
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/net_if_get_by_index_mrsh.c>
+#endif
 #endif
 
 #if defined(CONFIG_NET_NATIVE)
@@ -1879,7 +1881,9 @@ static inline int z_vrfy_net_if_ipv6_addr_lookup_by_index(
 
 	return z_impl_net_if_ipv6_addr_lookup_by_index(&addr_v6);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/net_if_ipv6_addr_lookup_by_index_mrsh.c>
+#endif
 #endif
 
 void net_if_ipv6_addr_update_lifetime(struct net_if_addr *ifaddr,
@@ -2088,7 +2092,9 @@ bool z_vrfy_net_if_ipv6_addr_add_by_index(int index,
 						    vlifetime);
 }
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/net_if_ipv6_addr_add_by_index_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 bool z_impl_net_if_ipv6_addr_rm_by_index(int index,
@@ -2121,7 +2127,9 @@ bool z_vrfy_net_if_ipv6_addr_rm_by_index(int index,
 	return z_impl_net_if_ipv6_addr_rm_by_index(index, &addr_v6);
 }
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/net_if_ipv6_addr_rm_by_index_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 void net_if_ipv6_addr_foreach(struct net_if *iface, net_if_ip_addr_cb_t cb,
@@ -3839,7 +3847,9 @@ static inline int z_vrfy_net_if_ipv4_addr_lookup_by_index(
 
 	return z_impl_net_if_ipv4_addr_lookup_by_index(&addr_v4);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/net_if_ipv4_addr_lookup_by_index_mrsh.c>
+#endif
 #endif
 
 struct in_addr net_if_ipv4_get_netmask_by_addr(struct net_if *iface,
@@ -4051,7 +4061,9 @@ bool z_vrfy_net_if_ipv4_set_netmask_by_index(int index,
 	return z_impl_net_if_ipv4_set_netmask_by_index(index, &netmask_addr);
 }
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/net_if_ipv4_set_netmask_by_index_mrsh.c>
+#endif
 
 bool z_vrfy_net_if_ipv4_set_netmask_by_addr_by_index(int index,
 						     const struct in_addr *addr,
@@ -4075,7 +4087,9 @@ bool z_vrfy_net_if_ipv4_set_netmask_by_addr_by_index(int index,
 							       &netmask_addr);
 }
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/net_if_ipv4_set_netmask_by_addr_by_index_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 struct in_addr net_if_ipv4_get_gw(struct net_if *iface)
@@ -4148,7 +4162,9 @@ bool z_vrfy_net_if_ipv4_set_gw_by_index(int index,
 	return z_impl_net_if_ipv4_set_gw_by_index(index, &gw_addr);
 }
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/net_if_ipv4_set_gw_by_index_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 static struct net_if_addr *ipv4_addr_find(struct net_if *iface,
@@ -4440,7 +4456,9 @@ bool z_vrfy_net_if_ipv4_addr_add_by_index(int index,
 						    vlifetime);
 }
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/net_if_ipv4_addr_add_by_index_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 bool z_impl_net_if_ipv4_addr_rm_by_index(int index,
@@ -4473,7 +4491,9 @@ bool z_vrfy_net_if_ipv4_addr_rm_by_index(int index,
 	return (uint32_t)z_impl_net_if_ipv4_addr_rm_by_index(index, &addr_v4);
 }
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/net_if_ipv4_addr_rm_by_index_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */
 
 void net_if_ipv4_addr_foreach(struct net_if *iface, net_if_ip_addr_cb_t cb,

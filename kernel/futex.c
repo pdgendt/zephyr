@@ -60,7 +60,9 @@ static inline int z_vrfy_k_futex_wake(struct k_futex *futex, bool wake_all)
 
 	return z_impl_k_futex_wake(futex, wake_all);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_futex_wake_mrsh.c>
+#endif
 
 int z_impl_k_futex_wait(struct k_futex *futex, int expected,
 			k_timeout_t timeout)
@@ -98,4 +100,6 @@ static inline int z_vrfy_k_futex_wait(struct k_futex *futex, int expected,
 
 	return z_impl_k_futex_wait(futex, expected, timeout);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/k_futex_wait_mrsh.c>
+#endif

@@ -348,6 +348,8 @@ static inline int z_impl_peci_transfer(const struct device *dev,
  * @}
  */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/peci.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_PECI_H_ */

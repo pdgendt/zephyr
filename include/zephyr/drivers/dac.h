@@ -142,6 +142,8 @@ static inline int z_impl_dac_write_value(const struct device *dev,
 }
 #endif
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/dac.h>
+#endif
 
 #endif  /* ZEPHYR_INCLUDE_DRIVERS_DAC_H_ */

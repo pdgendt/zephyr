@@ -405,6 +405,8 @@ void arch_elf_relocate_global(struct llext_loader *loader, struct llext *ext, co
 }
 #endif
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/llext.h>
+#endif
 
 #endif /* ZEPHYR_LLEXT_H */

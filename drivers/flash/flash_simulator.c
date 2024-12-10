@@ -510,6 +510,8 @@ void *z_vrfy_flash_simulator_get_memory(const struct device *dev,
 	return z_impl_flash_simulator_get_memory(dev, mock_size);
 }
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/flash_simulator_get_memory_mrsh.c>
+#endif
 
 #endif /* CONFIG_USERSPACE */

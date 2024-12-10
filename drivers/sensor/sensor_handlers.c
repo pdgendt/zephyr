@@ -17,7 +17,9 @@ static inline int z_vrfy_sensor_attr_set(const struct device *dev,
 	return z_impl_sensor_attr_set((const struct device *)dev, chan, attr,
 				      (const struct sensor_value *)val);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/sensor_attr_set_mrsh.c>
+#endif
 
 static inline int z_vrfy_sensor_attr_get(const struct device *dev,
 					 enum sensor_channel chan,
@@ -29,14 +31,18 @@ static inline int z_vrfy_sensor_attr_get(const struct device *dev,
 	return z_impl_sensor_attr_get((const struct device *)dev, chan, attr,
 				      (struct sensor_value *)val);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/sensor_attr_get_mrsh.c>
+#endif
 
 static inline int z_vrfy_sensor_sample_fetch(const struct device *dev)
 {
 	K_OOPS(K_SYSCALL_DRIVER_SENSOR(dev, sample_fetch));
 	return z_impl_sensor_sample_fetch((const struct device *)dev);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/sensor_sample_fetch_mrsh.c>
+#endif
 
 static inline int z_vrfy_sensor_sample_fetch_chan(const struct device *dev,
 						  enum sensor_channel type)
@@ -45,7 +51,9 @@ static inline int z_vrfy_sensor_sample_fetch_chan(const struct device *dev,
 	return z_impl_sensor_sample_fetch_chan((const struct device *)dev,
 					       type);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/sensor_sample_fetch_chan_mrsh.c>
+#endif
 
 static inline int z_vrfy_sensor_channel_get(const struct device *dev,
 					    enum sensor_channel chan,
@@ -56,7 +64,9 @@ static inline int z_vrfy_sensor_channel_get(const struct device *dev,
 	return z_impl_sensor_channel_get((const struct device *)dev, chan,
 					 (struct sensor_value *)val);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/sensor_channel_get_mrsh.c>
+#endif
 
 #ifdef CONFIG_SENSOR_ASYNC_API
 static inline int z_vrfy_sensor_get_decoder(const struct device *dev,
@@ -66,7 +76,9 @@ static inline int z_vrfy_sensor_get_decoder(const struct device *dev,
 	K_OOPS(K_SYSCALL_MEMORY_READ(decoder, sizeof(struct sensor_decoder_api)));
 	return z_impl_sensor_get_decoder(dev, decoder);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/sensor_get_decoder_mrsh.c>
+#endif
 
 static inline int z_vrfy_sensor_reconfigure_read_iodev(struct rtio_iodev *iodev,
 						       const struct device *sensor,
@@ -78,5 +90,7 @@ static inline int z_vrfy_sensor_reconfigure_read_iodev(struct rtio_iodev *iodev,
 	K_OOPS(K_SYSCALL_MEMORY_READ(channels, sizeof(enum sensor_channel) * num_channels));
 	return z_impl_sensor_reconfigure_read_iodev(iodev, sensor, channels, num_channels);
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/sensor_reconfigure_read_iodev_mrsh.c>
+#endif
 #endif

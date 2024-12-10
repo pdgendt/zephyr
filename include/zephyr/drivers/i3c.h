@@ -2150,6 +2150,8 @@ int i3c_bus_deftgts(const struct device *dev);
  * @}
  */
 
+#ifndef __ZPP__
 #include <zephyr/syscalls/i3c.h>
+#endif
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_I3C_H_ */

@@ -209,5 +209,7 @@ static inline int z_vrfy_zvfs_poll(struct zvfs_pollfd *fds, int nfds, int timeou
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/zvfs_poll_mrsh.c>
+#endif
 #endif

@@ -28,5 +28,7 @@ int z_vrfy_ptp_clock_get(const struct device *dev,
 
 	return ret;
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/ptp_clock_get_mrsh.c>
+#endif
 #endif /* CONFIG_USERSPACE */

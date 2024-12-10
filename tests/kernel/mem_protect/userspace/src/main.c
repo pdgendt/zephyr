@@ -1009,7 +1009,9 @@ static inline void z_vrfy_check_syscall_context(void)
 {
 	z_impl_check_syscall_context();
 }
+#ifndef __ZPP__
 #include <zephyr/syscalls/check_syscall_context_mrsh.c>
+#endif
 
 ZTEST_USER(userspace, test_syscall_context)
 {
