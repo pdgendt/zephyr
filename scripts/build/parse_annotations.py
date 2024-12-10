@@ -11,11 +11,9 @@ import shlex
 import subprocess
 from pathlib import Path
 
-from pycparser import CParser
-
-# ANNOTATION = re.compile(
-#     r'__attribute__\s*\(\(annotate\(\s*"(.*)"\s*\)\)\)\s+struct\s+([a-zA-Z0-9_]+)'
-# )
+ANNOTATION = re.compile(
+    r'__attribute__\s*\(\(annotate\(\s*"(.*)"\s*\)\)\)\s+struct\s+([a-zA-Z0-9_]+)'
+)
 
 def process_command(command: str, file: Path, directory: Path):
     parser = argparse.ArgumentParser()
@@ -29,34 +27,20 @@ def process_command(command: str, file: Path, directory: Path):
 
     # Use the argument parser to drop the output argument and keep everything else
     parser.add_argument("-o", "--output")
+    parser.add_argument("-DZEPHYRPP", action="store_true", dest="zpp")
     args, command_remaining = parser.parse_known_args(shlex.split(command))
 
+    if not args.zpp:
+        return
+
+    print(f"zpp {file}")
+
     # Generate the source code as produced by the preprocessor
-    # process = subprocess.Popen(command_remaining + ["-E", "-P"], stdout=subprocess.PIPE)
-    # assert process.stdout is not None
-    src = subprocess.check_output(
-        command_remaining
-        + ["-E", "-P", "-include", str(Path(__file__).parents[1] / "zpp" / "stubs.h")]
-    ).decode()
+    src = subprocess.check_output(command_remaining + ["-E", "-P", "-D__ZEPHYRPP__"]).decode()
 
-    cparser = CParser()
-    try:
-        ast = cparser.parse(src, directory / (args.output + ".i"))
-    finally:
-        print(command)
-        with open(directory / (args.output + ".i"), "w") as fp:
-            fp.write(src)
-
-    ast.dump()
-    # for line in iter(process.stdout.readline, b""):
-    #     line = line.decode().strip()
-        # #print(line)
-        #
-        # match = ANNOTATION.search(line)
-        # if match is None:
-        #     continue
-        #
-        # print(f"{match.group(1)},{match.group(2)}")
+    # debug only
+    with open(directory / f"{args.output}.i", "w") as fp:
+        fp.write(src)
 
 
 def parse_args():
