@@ -19,7 +19,7 @@ def process_command(command: str, file: Path, directory: Path):
     parser = argparse.ArgumentParser()
 
     # Only parse c files
-    if file.suffix != ".c":
+    if file.suffix != ".c" or not file.exists():
         return
 
     if os.name == "nt":
