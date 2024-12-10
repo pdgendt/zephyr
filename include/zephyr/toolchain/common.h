@@ -25,6 +25,16 @@
 #define EXTERN_C extern
 #endif
 
+/*
+ * Use C23 attributes with our own prefix to make sure the C preprocessor
+ * has content for the annotations.
+ */
+#ifdef __ZEPHYRPP__
+#define __annotate(x) [[zephyr::x]]
+#else
+#define __annotate(x)
+#endif
+
 /* Use TASK_ENTRY_CPP to tag task entry points defined in C++ files. */
 
 #ifdef __cplusplus
@@ -147,8 +157,8 @@
  * not used).
  */
 #ifndef ZTEST_UNITTEST
-#define __syscall static inline
-#define __syscall_always_inline static inline __attribute__((always_inline))
+#define __syscall __annotate(syscall) static inline
+#define __syscall_always_inline __annotate(syscall) static inline __attribute__((always_inline))
 #else
 #define __syscall
 #define __syscall_always_inline
@@ -160,10 +170,10 @@
  */
 
 /* Indicates this is a driver subsystem */
-#define __subsystem __attribute__((annotate("__subsystem")))
+#define __subsystem __annotate(subsystem)
 
 /* Indicates this is a network socket object */
-#define __net_socket __attribute__((annotate("__net_socket")))
+#define __net_socket __annotate(net_socket)
 
 #ifndef BUILD_ASSERT
 /* Compile-time assertion that makes the build to fail.
