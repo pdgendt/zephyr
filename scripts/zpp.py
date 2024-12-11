@@ -13,10 +13,9 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-ANNOTATION = re.compile(
-    r'__attribute__\s*\(\(annotate\(\s*"(.*)"\s*\)\)\)\s+struct\s+([a-zA-Z0-9_]+)'
-)
-
+# Match C23 attributes with the zephyr namespace, for example:
+# [[zephyr::func("syscall")]]
+ANNOTATION = re.compile(r'\[\[\s*zephyr::(?P<attr>[a-zA-Z0-9_]+)(?:\((?P<args>.+)\))?\s*\]\]')
 
 ZPP_ARGS = [
     "-E",  # Only run preprocessor
@@ -33,23 +32,27 @@ class CompileCommand:
     file: Path
 
 
-def debug(text):
-    if not args.debug:
-        return
-    sys.stdout.write(text + "\n")
+def dbg(*elems, **kwargs):
+    if args.verbosity > 1:
+        print(*elems, **kwargs)
+
+
+def inf(*elems, **kwargs):
+    if args.verbosity > 0:
+        print(*elems, **kwargs)
 
 
 def process_command(cmd: CompileCommand):
     # Only parse c files
     if cmd.file.suffix != ".c":
-        debug(f"SKIP(filetype): {cmd.file}")
+        inf(f"SKIP(filetype): {cmd.file}")
         return
     if not cmd.file.exists():
-        debug(f"SKIP(missing): {cmd.file}")
+        inf(f"SKIP(missing): {cmd.file}")
         return
 
     if os.name == "nt":
-        cmd.command=cmd.command.replace("\\", "\\\\") # Fix windows paths
+        cmd.command = cmd.command.replace("\\", "\\\\")  # Fix windows paths
 
     # Use the argument parser to drop the output argument and keep everything else
     parser = argparse.ArgumentParser()
@@ -58,16 +61,21 @@ def process_command(cmd: CompileCommand):
     command_args, command_remaining = parser.parse_known_args(shlex.split(cmd.command))
 
     if not command_args.zpp:
-        debug(f"SKIP(nozpp): {cmd.file}")
+        inf(f"SKIP(nozpp): {cmd.file}")
         return
 
-    debug(f"ZPP: {cmd.file}")
+    inf(f"ZPP: {cmd.file}")
 
     # Generate the source code as produced by the preprocessor
     src = subprocess.check_output(command_remaining + ZPP_ARGS).decode()
+    for line in src.splitlines():
+        match = re.search(ANNOTATION, line)
+        if match is None:
+            continue
 
-    # debug only
-    if args.debug:
+        dbg(f'{match.group("attr")}, {match.group("args")}')
+
+    if args.intermediate:
         with open(cmd.directory / f"{command_args.output}.i", "w") as fp:
             fp.write(src)
 
@@ -81,7 +89,18 @@ def parse_args():
     )
 
     parser.add_argument(
-        "-d", "--debug", action="store_true", help="Print extra debugging information"
+        "-v",
+        "--verbose",
+        dest="verbosity",
+        action="count",
+        help="print more diagnostic messages (option can be given multiple times)",
+        default=0,
+    )
+    parser.add_argument(
+        "-i",
+        "--intermediate",
+        action="store_true",
+        help="Store intermediate files",
     )
     parser.add_argument(
         "database",
@@ -94,7 +113,7 @@ def parse_args():
 def main():
     parse_args()
 
-    debug(f"ZPP_ARGS: {" ".join(ZPP_ARGS)}")
+    inf(f"ZPP_ARGS: {" ".join(ZPP_ARGS)}")
 
     with open(args.database) as fp:
         db_json = json.load(fp)
