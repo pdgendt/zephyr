@@ -73,6 +73,9 @@ def process_command(cmd: CompileCommand):
         if match is None:
             continue
 
+        if match.group("attr") == "struct":
+            pass
+
         dbg(f'{match.group("attr")}, {match.group("args")}')
 
     if args.intermediate:

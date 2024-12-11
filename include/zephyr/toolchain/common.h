@@ -158,7 +158,7 @@
  */
 #ifndef ZTEST_UNITTEST
 #define __syscall __zpp(func("syscall")) static inline
-#define __syscall_always_inline __zpp(func("syscall")) static inline __attribute__((always_inline))
+#define __syscall_always_inline __zpp(func("syscall")) static ALWAYS_INLINE
 #else
 #define __syscall
 #define __syscall_always_inline
@@ -170,10 +170,10 @@
  */
 
 /* Indicates this is a driver subsystem */
-#define __subsystem __zpp(struct("subsystem"))
+#define __subsystem __zpp(struct("__subsystem"))
 
 /* Indicates this is a network socket object */
-#define __net_socket __zpp(struct("net_socket"))
+#define __net_socket __zpp(struct("__net_socket"))
 
 #ifndef BUILD_ASSERT
 /* Compile-time assertion that makes the build to fail.
