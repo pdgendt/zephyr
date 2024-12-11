@@ -30,9 +30,9 @@
  * has content for the annotations.
  */
 #ifdef __ZPP__
-#define __annotate(x) [[zephyr::x]]
+#define __zpp(x) [[zephyr::x]]
 #else
-#define __annotate(x)
+#define __zpp(...)
 #endif
 
 /* Use TASK_ENTRY_CPP to tag task entry points defined in C++ files. */
@@ -157,8 +157,8 @@
  * not used).
  */
 #ifndef ZTEST_UNITTEST
-#define __syscall __annotate(syscall) static inline
-#define __syscall_always_inline __annotate(syscall) static inline __attribute__((always_inline))
+#define __syscall __zpp(func("syscall")) static inline
+#define __syscall_always_inline __zpp(func("syscall")) static inline __attribute__((always_inline))
 #else
 #define __syscall
 #define __syscall_always_inline
@@ -170,10 +170,10 @@
  */
 
 /* Indicates this is a driver subsystem */
-#define __subsystem __annotate(subsystem)
+#define __subsystem __zpp(struct("subsystem"))
 
 /* Indicates this is a network socket object */
-#define __net_socket __annotate(net_socket)
+#define __net_socket __zpp(struct("net_socket"))
 
 #ifndef BUILD_ASSERT
 /* Compile-time assertion that makes the build to fail.
