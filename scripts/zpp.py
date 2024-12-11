@@ -18,6 +18,14 @@ ANNOTATION = re.compile(
 )
 
 
+ZPP_ARGS = [
+    "-E",  # Only run preprocessor
+    "-P",  # No comment directives
+    "-D__ZPP__",  # ZPP define
+    f"-I{Path(__file__).parent / "zpp" / "include"}",  # Add include stubs
+]
+
+
 @dataclass
 class CompileCommand:
     command: str
@@ -32,7 +40,6 @@ def debug(text):
 
 
 def process_command(cmd: CompileCommand):
-
     # Only parse c files
     if cmd.file.suffix != ".c":
         debug(f"SKIP(filetype): {cmd.file}")
@@ -57,7 +64,7 @@ def process_command(cmd: CompileCommand):
     debug(f"ZPP: {cmd.file}")
 
     # Generate the source code as produced by the preprocessor
-    src = subprocess.check_output(command_remaining + ["-E", "-P", "-D__ZPP__"]).decode()
+    src = subprocess.check_output(command_remaining + ZPP_ARGS).decode()
 
     # debug only
     if args.debug:
@@ -86,6 +93,8 @@ def parse_args():
 
 def main():
     parse_args()
+
+    debug(f"ZPP_ARGS: {" ".join(ZPP_ARGS)}")
 
     with open(args.database) as fp:
         db_json = json.load(fp)
