@@ -9,6 +9,7 @@ import os
 import re
 import shlex
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -17,38 +18,51 @@ ANNOTATION = re.compile(
 )
 
 
-@dataclass(frozen=True)
+@dataclass
 class CompileCommand:
     command: str
     directory: Path
     file: Path
 
 
-def process_command(cmd: CompileCommand, dbg: bool = False):
-    parser = argparse.ArgumentParser()
+def debug(text):
+    if not args.debug:
+        return
+    sys.stdout.write(text + "\n")
+
+
+def process_command(cmd: CompileCommand):
 
     # Only parse c files
-    if cmd.file.suffix != ".c" or not cmd.file.exists():
+    if cmd.file.suffix != ".c":
+        debug(f"SKIP(filetype): {cmd.file}")
+        return
+    if not cmd.file.exists():
+        debug(f"SKIP(missing): {cmd.file}")
         return
 
     if os.name == "nt":
-        cmd = cmd.__replace__(command=cmd.command.replace("\\", "\\\\")) # Fix windows paths
+        cmd.command=cmd.command.replace("\\", "\\\\") # Fix windows paths
 
     # Use the argument parser to drop the output argument and keep everything else
+    parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--output")
     parser.add_argument("-DZPP", action="store_true", dest="zpp")
-    args, command_remaining = parser.parse_known_args(shlex.split(cmd.command))
+    command_args, command_remaining = parser.parse_known_args(shlex.split(cmd.command))
 
-    if not args.zpp:
+    if not command_args.zpp:
+        debug(f"SKIP(nozpp): {cmd.file}")
         return
 
+    debug(f"ZPP: {cmd.file}")
 
     # Generate the source code as produced by the preprocessor
     src = subprocess.check_output(command_remaining + ["-E", "-P", "-D__ZPP__"]).decode()
 
     # debug only
-    with open(cmd.directory / f"{args.output}.i", "w") as fp:
-        fp.write(src)
+    if args.debug:
+        with open(cmd.directory / f"{command_args.output}.i", "w") as fp:
+            fp.write(src)
 
 
 def parse_args():
@@ -59,8 +73,9 @@ def parse_args():
         allow_abbrev=False,
     )
 
-
-    parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="Print extra debugging information"
+    )
     parser.add_argument(
         "database",
         help="Database file, typically compile_commands.json in the build directory.",
@@ -78,11 +93,10 @@ def main():
     for item in db_json:
         process_command(
             CompileCommand(
-                command=item.get("commacsnd"),
+                command=item.get("command"),
                 directory=Path(item.get("directory")),
                 file=Path(item.get("file")),
             ),
-            args.debug,
         )
 
 
