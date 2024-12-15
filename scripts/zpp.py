@@ -30,7 +30,6 @@ ZPP_ARGS = [
     "-E",  # Only run preprocessor
     "-P",  # No comment directives
     "-D__ZPP__",  # ZPP define
-    f'-I{Path(__file__).parent / "zpp" / "include"}',  # Add include stubs
 ]
 
 
@@ -137,6 +136,7 @@ async def process_command(cmd: CompileCommand) -> tuple[set[Annotation], list[st
         return None
 
     result = set()
+    dependencies = []
     inf(f"ZPP: {cmd.file}")
 
     # Capture the dependencies
@@ -147,7 +147,27 @@ async def process_command(cmd: CompileCommand) -> tuple[set[Annotation], list[st
     deps_file.parent.mkdir(parents=True, exist_ok=True)
 
     output = tee(
-        command_remaining + ZPP_ARGS + ["-MMD", "-MF", str(deps_file)],
+        command_remaining + ZPP_ARGS + ["-M", "-MG"],
+        deps_file
+    )
+
+    # First run, collect includes
+    async for line in output:
+        include = line.split(":", 1)[-1].strip(' \t\n\r\\')
+        if include:
+            hdr = Path(include)
+            if hdr.exists():
+                dependencies.append(include)
+            else:
+                assert not hdr.is_absolute()
+                abs_hdr = Path(tmpdir.name) / hdr
+                abs_hdr.parent.mkdir(parents=True, exist_ok=True)
+                abs_hdr.touch()
+
+    print(tmpdir.name)
+    # Second run, actual preprocessor call
+    output = tee(
+        command_remaining + ZPP_ARGS + [f"-I{tmpdir.name}"],
         cmd.directory / f"{command_args.output}.zpp.i" if args.intermediate else None,
     )
 
@@ -197,7 +217,7 @@ async def process_command(cmd: CompileCommand) -> tuple[set[Annotation], list[st
     dbg("annotations", result)
     dbg("dependencies", deps)
 
-    return result, deps
+    return result, dependencies
 
 
 async def process_command_with_sem(
