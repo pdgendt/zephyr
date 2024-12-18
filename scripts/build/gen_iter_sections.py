@@ -29,21 +29,30 @@ def get_tagged_items(filepath: str, tags: list[str]) -> list[str]:
     return [i for i in result if i]
 
 
-def gen_ld(filepath: str, items: list, alignment: int):
+def gen_ld(filepath: str, items: list, args):
     with open(filepath, "w") as fp:
         for item in items:
-            fp.write(f"ITERABLE_SECTION_ROM({item}, {alignment})\n")
+            fp.write(f"ITERABLE_SECTION_{args.mem}({item}, {args.align})\n")
 
 
-def gen_cmake(filepath: str, items: list, alignment: int, prefix: str):
+def gen_cmake(filepath: str, items: list, args):
     with open(filepath, "w") as fp:
         for item in items:
-            fp.write(
-                f'list(APPEND sections "{{NAME\\;{item}_area\\;'
-                + 'GROUP\\;RODATA_REGION\\;'
-                + f'SUBALIGN\\;{alignment}\\;'
-                + 'NOINPUT\\;TRUE}")\n'
-            )
+            if args.mem == "ROM":
+                fp.write(
+                    f'list(APPEND sections "{{NAME\\;{item}_area\\;'
+                    + 'GROUP\\;RODATA_REGION\\;'
+                    + f'SUBALIGN\\;{args.align}\\;'
+                    + 'NOINPUT\\;TRUE}")\n'
+                )
+            else:
+                fp.write(
+                    f'list(APPEND sections "{{NAME\\;{item}_area\\;'
+                    + 'GROUP\\;DATA_REGION\\;'
+                    + f'SUBALIGN\\;{args.align}\\;'
+                    + f'{"ALIGN_WITH_INPUT\\;TRUE\\;" if args.xip else ""}'
+                    + 'NOINPUT\\;TRUE}")\n'
+                )
             fp.write(
                 f'list(APPEND section_settings "{{SECTION\\;{item}_area\\;'
                 + 'SORT\\;NAME\\;'
@@ -51,8 +60,8 @@ def gen_cmake(filepath: str, items: list, alignment: int, prefix: str):
                 + f'INPUT\\;._{item}.static.*\\;'
                 + f'SYMBOLS\\;_{item}_list_start\\;_{item}_list_end}}")\n'
             )
-        fp.write(f'set({prefix}_SECTIONS         "${{sections}}" CACHE INTERNAL "")\n')
-        fp.write(f'set({prefix}_SECTION_SETTINGS "${{section_settings}}" CACHE INTERNAL "")\n')
+        fp.write(f'set({args.prefix}_SECTIONS         "${{sections}}" CACHE INTERNAL "")\n')
+        fp.write(f'set({args.prefix}_SECTION_SETTINGS "${{section_settings}}" CACHE INTERNAL "")\n')
 
 
 def parse_args() -> argparse.Namespace:
@@ -63,7 +72,19 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument("-i", "--input", required=True, help="Path to input list of tags")
-    parser.add_argument("-a", "--alignment", required=True, help="Iterable section alignment")
+    parser.add_argument(
+        "-a", "--alignment", dest="align", required=True, help="Iterable section alignment"
+    )
+    parser.add_argument("-x", "--xip", action="store_true", help="Add if XIP is enabled")
+    parser.add_argument(
+        "-m",
+        "--memory-type",
+        dest="mem",
+        default="ROM",
+        choices=["ROM", "RAM"],
+        action="store",
+        help="The iterable section's memory type",
+    )
     parser.add_argument(
         "-t",
         "--tag",
@@ -76,7 +97,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-c", "--cmake-output", required=True, help="Path to CMake linker script inclusion file"
     )
-    parser.add_argument("-p", "--cmake-prefix", required=True, help="Section name prefix")
+    parser.add_argument(
+        "-p", "--cmake-prefix", dest="prefix", required=True, help="Section name prefix"
+    )
 
     return parser.parse_args()
 
@@ -86,8 +109,8 @@ def main():
 
     items = get_tagged_items(args.input, args.tags)
 
-    gen_ld(args.ld_output, items, args.alignment)
-    gen_cmake(args.cmake_output, items, args.alignment, args.cmake_prefix)
+    gen_ld(args.ld_output, items, args)
+    gen_cmake(args.cmake_output, items, args)
 
 
 if __name__ == "__main__":
