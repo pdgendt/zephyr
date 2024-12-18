@@ -894,8 +894,12 @@ gen_kobj(KOBJ_INCLUDE_PATH)
 
 # Generate sections for kernel device subsystems
 set(
-  ITERABLE_STRUCTS_LD_SECTIONS
-  ${CMAKE_CURRENT_BINARY_DIR}/include/generated/iterable-structs-sections.ld
+  ITERABLE_STRUCTS_LD_RAM_SECTIONS
+  ${CMAKE_CURRENT_BINARY_DIR}/include/generated/iterable-structs-ram-sections.ld
+  )
+set(
+  ITERABLE_STRUCTS_LD_ROM_SECTIONS
+  ${CMAKE_CURRENT_BINARY_DIR}/include/generated/iterable-structs-rom-sections.ld
   )
 
 set(ITERABLE_STRUCTS_LINKER_SECTIONS_CMAKE
@@ -903,15 +907,18 @@ set(ITERABLE_STRUCTS_LINKER_SECTIONS_CMAKE
 )
 
 add_custom_command(
-  OUTPUT ${ITERABLE_STRUCTS_LD_SECTIONS} ${ITERABLE_STRUCTS_LINKER_SECTIONS_CMAKE}
+  OUTPUT
+    ${ITERABLE_STRUCTS_LD_RAM_SECTIONS}
+    ${ITERABLE_STRUCTS_LD_ROM_SECTIONS}
+    ${ITERABLE_STRUCTS_LINKER_SECTIONS_CMAKE}
   COMMAND
     ${PYTHON_EXECUTABLE}
     ${ZEPHYR_BASE}/scripts/build/gen_iter_sections.py
     --alignment ${CONFIG_LINKER_ITERABLE_SUBALIGN}
     --input ${annotations_json}
-    --tag __subsystem
-    --tag __iterable_section_rom
-    --ld-output ${ITERABLE_STRUCTS_LD_SECTIONS}
+    $<$<BOOL:${CONFIG_XIP}>:--xip>
+    --ld-ram-output ${ITERABLE_STRUCTS_LD_RAM_SECTIONS}
+    --ld-rom-output ${ITERABLE_STRUCTS_LD_ROM_SECTIONS}
     --cmake-output ${ITERABLE_STRUCTS_LINKER_SECTIONS_CMAKE}
     --cmake-prefix "ITERABLE_STRUCTS"
   DEPENDS
@@ -921,7 +928,8 @@ add_custom_command(
   )
 
 add_custom_target(${ITERABLE_STRUCTS_LD_TARGET}
-                  DEPENDS ${ITERABLE_STRUCTS_LD_SECTIONS}
+                  DEPENDS ${ITERABLE_STRUCTS_LD_RAM_SECTIONS}
+                          ${ITERABLE_STRUCTS_LD_ROM_SECTIONS}
                           ${ITERABLE_STRUCTS_LINKER_SECTIONS_CMAKE}
 )
 
