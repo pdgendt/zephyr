@@ -1,0 +1,26 @@
+# Copyright (c) 2025, Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  GPIO reset controller.
+
+compatible: "zephyr,gpio-reset"
+
+include: [reset-controller.yaml, base.yaml]
+
+properties:
+  "#reset-cells":
+    const: 1
+
+  assert-time:
+    type: int
+    description: |
+      The optional time in milliseconds to sleep after asserting the reset.
+
+  deassert-time:
+    type: int
+    description: |
+      The optional time in milliseconds to sleep after deasserting the reset.
+
+reset-cells:
+  - id

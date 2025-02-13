@@ -1,0 +1,9 @@
+# Copyright (c) 2025 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+config RESET_GPIO
+	bool "GPIO reset driver"
+	default y
+	depends on DT_HAS_ZEPHYR_GPIO_RESET_ENABLED
+	help
+	  This option enables the reset driver using GPIO pins.
