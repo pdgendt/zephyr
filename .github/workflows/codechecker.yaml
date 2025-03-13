@@ -1,0 +1,94 @@
+name: Code Analysis with CodeChecker
+
+on:
+  # schedule:
+  #   - cron: '25 06,18 * * *'
+  workflow_dispatch:
+    inputs:
+      twister_args:
+        type: string
+        default: '-p native_sim -T samples/hello_world'
+        description: |
+          Arguments passed to twister
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  codechecker:
+    if: github.repository_owner == 'zephyrproject-rtos'
+    runs-on:
+      group: zephyr-runner-v2-linux-x64-4xlarge
+    permissions:
+      security-events: write
+    container:
+      image: ghcr.io/zephyrproject-rtos/ci-repo-cache:v0.27.4.20241026
+      options: '--entrypoint /bin/bash'
+    steps:
+      - name: Apply container owner mismatch workaround
+        run: |
+          # FIXME: The owner UID of the GITHUB_WORKSPACE directory may not
+          #        match the container user UID because of the way GitHub
+          #        Actions runner is implemented. Remove this workaround when
+          #        GitHub comes up with a fundamental fix for this problem.
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+
+      - name: Print cloud service information
+        run: |
+          echo "ZEPHYR_RUNNER_CLOUD_PROVIDER = ${ZEPHYR_RUNNER_CLOUD_PROVIDER}"
+          echo "ZEPHYR_RUNNER_CLOUD_NODE = ${ZEPHYR_RUNNER_CLOUD_NODE}"
+          echo "ZEPHYR_RUNNER_CLOUD_POD = ${ZEPHYR_RUNNER_CLOUD_POD}"
+
+      - name: Update PATH for west
+        run: |
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Clone cached Zephyr repository
+        continue-on-error: true
+        run: |
+          git clone --shared /repo-cache/zephyrproject/zephyr .
+          git remote set-url origin ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}
+
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: west setup
+        run: |
+          west init -l . || true
+          west update 1> west.update.log || west update 1> west.update-2.log
+
+      - name: Environment Setup
+        run: |
+          cmake --version
+          gcc --version
+          ls -la
+          echo "ZEPHYR_SDK_INSTALL_DIR=/opt/toolchains/zephyr-sdk-$( cat SDK_VERSION )" >> $GITHUB_ENV
+
+      - name: Run Analysis with Twister
+        continue-on-error: true
+        run: |
+          export ZEPHYR_BASE=${PWD}
+          export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
+          export ZEPHYR_SCA_VARIANT=codechecker
+          export CODECHECKER_CONFIG_FILE=$ZEPHYR_BASE/.codechecker.yml
+          export CODECHECKER_CLEANUP=y
+          export CODECHECKER_EXPORT=sarif
+
+          pip install codechecker==6.25.0
+          ./scripts/twister -i --force-color -N -v --build-only --timeout-multiplier 2 \
+            ${{ github.event.inputs.twister_args }}
+
+      - name: Merge sarif files
+        if: always()
+        run: |
+          pip install sarif-tools
+          sarif copy --output results.sarif $(find twister-out -name "codechecker.sarif")
+
+      - name: Upload Analysis Results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif-file: results.sarif
