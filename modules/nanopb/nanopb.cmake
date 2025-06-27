@@ -32,6 +32,22 @@ function(zephyr_nanopb_sources target)
 
   nanopb_generate_cpp(proto_srcs proto_hdrs RELPATH ${CMAKE_CURRENT_SOURCE_DIR} ${ARGN})
 
+  # Generate gRPC service boilerplate code for Zephyr HTTP/2 server
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+  foreach(p ${ARGN})
+    get_filename_component(proto_basename ${p} NAME_WE)
+    set(_grpc_hdr ${CMAKE_CURRENT_BINARY_DIR}/${proto_basename}.pb.grpc.h)
+    add_custom_command(OUTPUT ${_grpc_hdr}
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_LIST_DIR}/extra/grpc_nanopb_generator.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/${p}
+                ${CMAKE_CURRENT_BINARY_DIR}
+        DEPENDS ${CMAKE_CURRENT_LIST_DIR}/extra/grpc_nanopb_generator.py
+        COMMENT "Generating gRPC boilerplate for ${p}"
+    )
+    list(APPEND proto_hdrs ${_grpc_hdr})
+  endforeach()
+
   target_include_directories(${target} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
   target_sources(${target} PRIVATE ${proto_srcs} ${proto_hdrs})
 
