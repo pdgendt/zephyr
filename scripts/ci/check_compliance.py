@@ -1816,7 +1816,7 @@ class KeepSorted(ComplianceTest):
 
     MARKER = "zephyr-keep-sorted"
 
-    def block_check_sorted(self, block_data, regex):
+    def block_check_sorted(self, block_data, *, regex, strip, fold, ignorecase):
         def _test_indent(txt: str):
             return txt.startswith((" ", "\t"))
 
@@ -1831,6 +1831,12 @@ class KeepSorted(ComplianceTest):
                 # Ignore blank lines
                 continue
 
+            if strip is not None:
+                line = line.strip(strip)
+
+            if ignorecase:
+                line = line.casefold()
+
             if regex:
                 # check for regex
                 if not re.match(regex, line):
@@ -1839,9 +1845,10 @@ class KeepSorted(ComplianceTest):
                 if _test_indent(line):
                     continue
 
-                # Fold back indented lines after the current one
-                for cont in takewhile(_test_indent, lines[idx + 1:]):
-                    line += cont.strip()
+                if fold:
+                    # Fold back indented lines after the current one
+                    for cont in takewhile(_test_indent, lines[idx + 1:]):
+                        line += cont.strip()
 
             if line < last:
                 return idx
@@ -1862,8 +1869,14 @@ class KeepSorted(ComplianceTest):
         start_marker = f"{self.MARKER}-start"
         stop_marker = f"{self.MARKER}-stop"
         regex_marker = r"re\((.+)\)"
+        strip_marker = r"strip\((.+)\)"
+        nofold_marker = "nofold"
+        ignorecase_marker = "ignorecase"
         start_line = 0
         regex = None
+        strip = None
+        fold = True
+        ignorecase = False
 
         for line_num, line in enumerate(fp.readlines(), start=1):
             if start_marker in line:
@@ -1878,6 +1891,12 @@ class KeepSorted(ComplianceTest):
                 # Test for a regex block
                 match = re.search(regex_marker, line)
                 regex = match.group(1) if match else None
+
+                match = re.search(strip_marker, line)
+                strip = match.group(1) if match else None
+
+                fold = nofold_marker not in line
+                ignorecase = ignorecase_marker in line
             elif stop_marker in line:
                 if not in_block:
                     desc = f"{stop_marker} without {start_marker}"
@@ -1885,7 +1904,9 @@ class KeepSorted(ComplianceTest):
                                      desc=desc)
                 in_block = False
 
-                idx = self.block_check_sorted(block_data, regex)
+                idx = self.block_check_sorted(
+                    block_data, regex=regex, strip=strip, fold=fold, ignorecase=ignorecase
+                )
                 if idx >= 0:
                     desc = f"sorted block has out-of-order line at {start_line + idx}"
                     self.fmtd_failure("error", "KeepSorted", file, line_num,
