@@ -109,7 +109,6 @@ set_variable_ifdef(CONFIG_HWINFO_MCUX_SIM       CONFIG_MCUX_COMPONENT_driver.sim
 set_variable_ifdef(CONFIG_HWINFO_MCUX_RCM       CONFIG_MCUX_COMPONENT_driver.rcm)
 set_variable_ifdef(CONFIG_IPM_MCUX              CONFIG_MCUX_COMPONENT_driver.mailbox)
 set_variable_ifdef(CONFIG_MBOX_NXP_MAILBOX      CONFIG_MCUX_COMPONENT_driver.mailbox)
-set_variable_ifdef(CONFIG_COUNTER_MCUX_SNVS     CONFIG_MCUX_COMPONENT_driver.snvs_hp)
 set_variable_ifdef(CONFIG_MCUX_LPTMR_TIMER      CONFIG_MCUX_COMPONENT_driver.lptmr)
 set_variable_ifdef(CONFIG_COUNTER_MCUX_LPTMR    CONFIG_MCUX_COMPONENT_driver.lptmr)
 set_variable_ifdef(CONFIG_IMX_USDHC	            CONFIG_MCUX_COMPONENT_driver.usdhc)
@@ -136,7 +135,6 @@ set_variable_ifdef(CONFIG_S3MU_MCUX_S3MU        CONFIG_MCUX_COMPONENT_driver.s3m
 set_variable_ifdef(CONFIG_DAI_NXP_MICFIL        CONFIG_MCUX_COMPONENT_driver.pdm)
 set_variable_ifdef(CONFIG_PINCTRL_NXP_PORT      CONFIG_MCUX_COMPONENT_driver.port)
 set_variable_ifdef(CONFIG_DMA_NXP_EDMA          CONFIG_MCUX_COMPONENT_driver.edma_soc_rev2)
-set_variable_ifdef(CONFIG_COUNTER_MCUX_SNVS_SRTC    CONFIG_MCUX_COMPONENT_driver.snvs_lp)
 set_variable_ifdef(CONFIG_DISPLAY_MCUX_DCNANO_LCDIF CONFIG_MCUX_COMPONENT_driver.lcdif)
 set_variable_ifdef(CONFIG_MIPI_DBI_NXP_DCNANO_LCDIF CONFIG_MCUX_COMPONENT_driver.lcdif)
 set_variable_ifdef(CONFIG_MIPI_DBI_NXP_FLEXIO_LCDIF CONFIG_MCUX_COMPONENT_driver.flexio_mculcd)
@@ -144,6 +142,14 @@ set_variable_ifdef(CONFIG_VIDEO_MCUX_MIPI_CSI2RX    CONFIG_MCUX_COMPONENT_driver
 set_variable_ifdef(CONFIG_ETH_NXP_IMX_NETC          CONFIG_MCUX_COMPONENT_driver.netc)
 if(NOT CONFIG_SOC_MIMX9596)
   set_variable_ifdef(CONFIG_ETH_NXP_IMX_NETC          CONFIG_MCUX_COMPONENT_driver.netc_switch)
+endif()
+
+if(CONFIG_COUNTER_MCUX_SNVS OR CONFIG_RTC_NXP_IMX_SNVS)
+  set(CONFIG_MCUX_COMPONENT_driver.snvs_hp ON)
+
+  if(CONFIG_COUNTER_MCUX_SNVS_SRTC OR CONFIG_RTC_NXP_IMX_SNVS)
+    set(CONFIG_MCUX_COMPONENT_driver.snvs_lp ON)
+  endif()
 endif()
 
 set_variable_ifdef(CONFIG_SOC_SERIES_IMXRT10XX    CONFIG_MCUX_COMPONENT_driver.ocotp)

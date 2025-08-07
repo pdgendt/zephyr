@@ -1,0 +1,7 @@
+# Copyright 2025 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+config RTC_NXP_IMX_SNVS
+	bool "NXP i.MX SNVS Real Time Clock driver"
+	default y
+	depends on DT_HAS_NXP_IMX_SNVS_RTC_ENABLED

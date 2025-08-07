@@ -8,4 +8,6 @@ description: NXP SNVS LP/HP RTC
 
 compatible: "nxp,imx-snvs-rtc"
 
-include: rtc.yaml
+include:
+  - name: rtc.yaml
+  - name: pm.yaml
