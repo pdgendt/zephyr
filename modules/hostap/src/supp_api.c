@@ -1081,6 +1081,34 @@ static int wpas_add_and_config_network(struct wpa_supplicant *wpa_s,
 		}
 	}
 
+#if defined(CONFIG_WIFI_NM_WPA_SUPPLICANT_BGSCAN)
+	if (params->bgscan.type == WIFI_BGSCAN_SIMPLE) {
+		if (!IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_BGSCAN_SIMPLE)) {
+			wpa_printf(MSG_ERROR, "Invalid bgscan type, enable "
+					      "CONFIG_WIFI_NM_WPA_SUPPLICANT_BGSCAN_SIMPLE");
+			goto rem_net;
+		}
+		if (!wpa_cli_cmd_v("set_network %d bgscan \"simple:%d:%d:%d\"", resp.network_id,
+				   params->bgscan.short_interval, params->bgscan.rssi_threshold,
+				   params->bgscan.long_interval)) {
+			goto out;
+		}
+	} else if (params->bgscan.type == WIFI_BGSCAN_LEARN) {
+		if (!IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_BGSCAN_LEARN)) {
+			wpa_printf(MSG_ERROR, "Invalid bgscan type, enable "
+					      "CONFIG_WIFI_NM_WPA_SUPPLICANT_BGSCAN_LEARN");
+			goto rem_net;
+		}
+		if (!wpa_cli_cmd_v("set_network %d bgscan \"learn:%d:%d:%d\"", resp.network_id,
+				   params->bgscan.short_interval, params->bgscan.rssi_threshold,
+				   params->bgscan.long_interval)) {
+			goto out;
+		}
+	} else if (!wpa_cli_cmd_v("set_network %d bgscan \"\"", resp.network_id)) {
+		goto out;
+	}
+#endif /* CONFIG_WIFI_NM_WPA_SUPPLICANT_BGSCAN */
+
 	memcpy((void *)&mac, params->bssid, WIFI_MAC_ADDR_LEN);
 	if (net_eth_is_addr_broadcast(&mac) ||
 	    net_eth_is_addr_multicast(&mac)) {

@@ -557,6 +557,28 @@ struct wifi_scan_result {
 	uint8_t mac_length;
 };
 
+/** @brief Wi-Fi background scan implementation */
+enum wifi_bgscan_type {
+	/** None, background scan is disabled */
+	WIFI_BGSCAN_NONE = 0,
+	/** Simple, periodic scan based on signal strength */
+	WIFI_BGSCAN_SIMPLE,
+	/** Learn channels used by the network (experimental) */
+	WIFI_BGSCAN_LEARN,
+};
+
+/** @brief Wi-Fi background scan parameters */
+struct wifi_bgscan_params {
+	/** The type of background scanning */
+	enum wifi_bgscan_type type;
+	/** Short scan interval in seconds */
+	uint16_t short_interval;
+	/** Signal strength threshold in dBm */
+	int8_t rssi_threshold;
+	/** Long scan interval in seconds */
+	uint16_t long_interval;
+};
+
 /** @brief Wi-Fi connect request parameters */
 struct wifi_connect_req_params {
 	/** SSID */
@@ -716,6 +738,11 @@ struct wifi_connect_req_params {
 	uint8_t ignore_broadcast_ssid;
 	/** Parameter used for frequency band */
 	enum wifi_frequency_bandwidths bandwidth;
+
+#if defined(CONFIG_WIFI_NM_WPA_SUPPLICANT_BGSCAN) || defined(__DOXYGEN__)
+	/** Background scan parameters */
+	struct wifi_bgscan_params bgscan;
+#endif
 };
 
 /** @brief Wi-Fi disconnect reason codes. To be overlaid on top of \ref wifi_status
