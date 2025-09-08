@@ -619,6 +619,7 @@ static int __wifi_args_to_params(const struct shell *sh, size_t argc, char *argv
 		{"eap-pwd8", required_argument, 0, 'P'},
 		{"ignore-broadcast-ssid", required_argument, 0, 'g'},
 		{"ieee-80211r", no_argument, 0, 'R'},
+		{"bgscan", required_argument, 0, 'G'},
 		{"iface", required_argument, 0, 'i'},
 		{"help", no_argument, 0, 'h'},
 		{0, 0, 0, 0}};
@@ -647,8 +648,11 @@ static int __wifi_args_to_params(const struct shell *sh, size_t argc, char *argv
 	params->ignore_broadcast_ssid = 0;
 	params->bandwidth = WIFI_FREQ_BANDWIDTH_20MHZ;
 	params->verify_peer_cert = false;
+#if defined(CONFIG_WIFI_NM_WPA_SUPPLICANT_BGSCAN)
+	params->bgscan.type = WIFI_BGSCAN_NONE;
+#endif
 
-	while ((opt = getopt_long(argc, argv, "s:p:k:e:w:b:c:m:t:a:B:K:S:T:A:V:I:P:g:Rh:i:",
+	while ((opt = getopt_long(argc, argv, "s:p:k:e:w:b:c:m:t:a:B:K:S:T:A:V:I:P:g:RGhi:",
 				  long_options, &opt_index)) != -1) {
 		state = getopt_state_get();
 		switch (opt) {
@@ -866,6 +870,43 @@ static int __wifi_args_to_params(const struct shell *sh, size_t argc, char *argv
 		case 'R':
 			params->ft_used = true;
 			break;
+		case 'G':
+#if defined(CONFIG_WIFI_NM_WPA_SUPPLICANT_BGSCAN)
+			if (strncmp("simple:", state->optarg, 7) == 0) {
+				params->bgscan.type = WIFI_BGSCAN_SIMPLE;
+				state->optarg += 7;
+			} else if (strncmp("learn:", state->optarg, 6) == 0) {
+				params->bgscan.type = WIFI_BGSCAN_LEARN;
+				state->optarg += 6;
+			} else {
+				PR_WARNING("Invalid bgscan type %s", state->optarg);
+				return -EINVAL;
+			}
+
+			params->bgscan.short_interval = strtoul(state->optarg, &endptr, 10);
+			if (*endptr != ':') {
+				PR_WARNING("Invalid bgscan short interval %s", state->optarg);
+				return -EINVAL;
+			}
+
+			state->optarg = endptr + 1;
+			params->bgscan.rssi_threshold = strtol(state->optarg, &endptr, 10);
+			if (*endptr != ':') {
+				PR_WARNING("Invalid bgscan rssi threshold %s", state->optarg);
+				return -EINVAL;
+			}
+
+			state->optarg = endptr + 1;
+			params->bgscan.long_interval = strtoul(state->optarg, &endptr, 10);
+			if (*endptr != '\0') {
+				PR_WARNING("Invalid bgscan long interval %s", state->optarg);
+				return -EINVAL;
+			}
+			break;
+#else
+			PR_WARNING("bgscan not enabled, see CONFIG_WIFI_NM_WPA_SUPPLICANT_BGSCAN");
+			return -EINVAL;
+#endif
 		case 'g':
 			params->ignore_broadcast_ssid = shell_strtol(state->optarg, 10, &ret);
 			break;
@@ -3921,6 +3962,9 @@ SHELL_SUBCMD_ADD((wifi), connect, NULL,
 		 "[-P, --eap-pwd1]: Client Password.\n"
 		 "Default no password for eap user.\n"
 		 "[-R, --ieee-80211r]: Use IEEE80211R fast BSS transition connect."
+		 "[-G, --bgscan]: Enable and configure background scanning,\n"
+		 "format is \"<type>:<short interval>:<rssi threshold>:<long interval>\".\n"
+		 "Type is either \"simple\" or \"learn\".\n"
 		 "[-h, --help]: Print out the help for the connect command.\n"
 		 "[-i, --iface=<interface index>] : Interface index.\n",
 		 cmd_wifi_connect,
