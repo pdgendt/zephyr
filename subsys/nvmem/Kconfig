@@ -11,6 +11,11 @@ config NVMEM_EEPROM
 	default y
 	depends on EEPROM
 
+config NVMEM_SYSCON
+	bool "NVMEM support for SYSCON devices"
+	default y
+	depends on SYSCON
+
 module = NVMEM
 module-str = nvmem
 source "subsys/logging/Kconfig.template.log_config"
