@@ -11,3 +11,8 @@ tests:
       - CONFIG_EEPROM=y
     extra_dtc_overlay_files:
       - eeprom.overlay
+  nvmem.api.syscon:
+    extra_configs:
+      - CONFIG_SYSCON=y
+    extra_dtc_overlay_files:
+      - syscon.overlay
