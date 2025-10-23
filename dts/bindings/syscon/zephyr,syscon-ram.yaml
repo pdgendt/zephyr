@@ -1,0 +1,18 @@
+# Copyright (c) 2025 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+description: System Controller Registers R/W with a RAM backend
+
+compatible: "zephyr,syscon-ram"
+
+include: base.yaml
+
+properties:
+  reg-io-width:
+    type: int
+    description: The width of the registers in the syscon region in bytes. Default is 4 bytes.
+
+  size:
+    required: true
+    type: int
+    description: Size of RAM buffer (bytes)

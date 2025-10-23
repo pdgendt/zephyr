@@ -1,0 +1,7 @@
+# Copyright (c) 2025 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+config SYSCON_ZEPHYR_RAM
+	bool "SYSCON driver with RAM backend"
+	default y
+	depends on DT_HAS_ZEPHYR_SYSCON_RAM_ENABLED
