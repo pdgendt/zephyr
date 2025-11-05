@@ -1,0 +1,26 @@
+# Microchip PAC1921 Power/Current Monitor
+#
+# Copyright (c) 2025 Basalte bv
+#
+# SPDX-License-Identifier: Apache-2.0
+
+config PAC1921
+	bool "PAC1921 Power/Current Monitor"
+	default y
+	depends on DT_HAS_MICROCHIP_PAC1921_ENABLED
+	select I2C
+	help
+	  Enables driver for High-Side Power/Current Monitor with Analog Output.
+
+if PAC1921
+
+config PAC1921_STREAM
+	bool "PAC1921 data streaming"
+	default y
+	depends on I2C_RTIO
+	depends on SENSOR_ASYNC_API
+
+config PAC1921_TRIGGER
+	bool
+
+endif

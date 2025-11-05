@@ -1,0 +1,21 @@
+# Copyright (c) 2025 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+title: PAC1921 Power/Current Monitor
+
+description: |
+  The PAC1921 is a dedicated power-monitoring device with a configurable
+  analog output that can present power, current or voltage.
+
+  For more information: https://www.microchip.com/en-us/product/pac1921
+
+compatible: "microchip,pac1921"
+
+include: [sensor-device.yaml, i2c-device.yaml]
+
+properties:
+  read-int-gpios:
+    type: phandle-array
+    description: |
+      READ/INT pin to control power states.
+      The inactive level puts the device in a READ state (low power).
