@@ -1444,3 +1444,9 @@ test_i2c_wsen_pdms_25131308XXX05: wsen_pdms_25131308XXX05@c0 {
 	reg = <0xc0>;
 	sensor-type = <4>;
 };
+
+test_i2c_pac1921: pac1921@c1 {
+	compatible = "microchip,pac1921";
+	reg = <0xc1>;
+	read-int-gpios = <&test_gpio 0 0>;
+};
