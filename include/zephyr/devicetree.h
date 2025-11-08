@@ -436,6 +436,41 @@
 #define DT_CHILD(node_id, child) UTIL_CAT(node_id, DT_S_PREFIX(child))
 
 /**
+ * @brief Get a node identifier for a child node by a reg address
+ *
+ * Example devicetree fragment:
+ *
+ * @code{.dts}
+ *     / {
+ *             soc-label: soc {
+ *                     serial1: serial@40001000 {
+ *                             status = "okay";
+ *                             current-speed = <115200>;
+ *                             ...
+ *                     };
+ *             };
+ *     };
+ * @endcode
+ *
+ * Example usage with DT_PROP() to get the status of the
+ * `serial@40001000` node:
+ *
+ * @code{.c}
+ *     #define SOC_NODE DT_NODELABEL(soc_label)
+ *     DT_PROP(DT_CHILD_BY_REG_ADDR(SOC_NODE, 0, 0x40001000), status) // "okay"
+ * @endcode
+ *
+ *
+ * @param node_id node identifier
+ * @param idx Register address index for the child node.
+ * @param addr Register address for the child node. Can be hexadecimal (prefix with 0x) or decimal
+ *
+ * @return node identifier for the child node with the reg address at a specified index
+ */
+#define DT_CHILD_BY_REG_ADDR(node_id, idx, addr) \
+	DT_CAT5(node_id, _CHILD_REG_IDX_, idx, _ADDR_, addr)
+
+/**
  * @brief Get a node identifier for a status `okay` node with a compatible
  *
  * Use this if you want to get an arbitrary enabled node with a given
@@ -4065,6 +4100,20 @@
  */
 #define DT_INST_CHILD(inst, child) \
 	DT_CHILD(DT_DRV_INST(inst), child)
+
+/**
+ * @brief Get a node identifier for a child node by a reg address of DT_DRV_INST(inst)
+ *
+ * @param inst instance number
+ * @param idx Register address index for the child node.
+ * @param addr Register address for the child node. Can be hexadecimal (prefix with 0x) or decimal
+ *
+ * @return node identifier for the child node with the reg address at a specified index
+ *
+ * @see DT_CHILD_BY_REG_ADDR
+ */
+#define DT_INST_CHILD_BY_REG_ADDR(inst, idx, addr) \
+	DT_CHILD_BY_REG_ADDR(DT_DRV_INST(inst), idx, addr)
 
 /**
  * @brief Get the number of child nodes of a given node
