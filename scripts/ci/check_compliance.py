@@ -6,6 +6,8 @@
 
 import argparse
 import collections
+from dataclasses import dataclass
+from genericpath import exists
 import json
 import logging
 import os
@@ -1724,6 +1726,28 @@ class LicenseAndCopyrightCheck(ComplianceTest):
     doc = "Check SPDX headers and copyright lines with the reuse Python API."
     APACHE_2_0_ID = "Apache-2.0"
 
+    @dataclass
+    class LicenseException:
+        name: str
+        license: str
+        files: list[str]
+        impact: str
+        origin: str | None = None
+
+    @staticmethod
+    def _parse_exceptions(path: Path) -> list[LicenseException]:
+        if not path.exists():
+            return []
+
+        with open(path, "r", encoding="utf-8") as f:
+            exceptions = yaml.safe_load(f.read())
+        assert isinstance(exceptions, dict)
+
+        return [
+            LicenseAndCopyrightCheck.LicenseException(name=k, **v)
+            for k, v in exceptions.items()
+        ]
+
     def _report_violations(
         self,
         paths: Iterable[Path],
@@ -1739,6 +1763,9 @@ class LicenseAndCopyrightCheck(ComplianceTest):
         changed_files = get_files(filter="d")
         if not changed_files:
             return
+
+        exceptions = self._parse_exceptions(GIT_TOP / 'LICENSES' / 'exceptions.yaml')
+        print(exceptions)
 
         # Only scan text files for now, in the future we may want to leverage REUSE standard's
         # ability to also associate license/copyright info with binary files.

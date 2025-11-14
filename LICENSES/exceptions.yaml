@@ -1,0 +1,177 @@
+# SPDX-FileCopyrightText: Copyright The Zephyr Project Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+# This file lists known exceptions for the REUSE tool to check for licensing compliance.
+
+"Continuous Integration Scripts":
+  origin: Linux Kernel
+  license: GPLv2
+  impact: |
+    These files are used in Continuous Integration (CI) and never linked into the firmware.
+  files:
+    - scripts/checkpatch.pl`
+    - scripts/checkstack.pl`
+    - scripts/spelling.txt`
+
+"Coccinelle Scripts":
+  origin: Coccinelle
+  license: GPLv2
+  impact: |
+    These files are used by Coccinelle, a tool for transforming C-code, and never linked
+    into the firmware.
+  files:
+    - scripts/coccicheck`
+    - scripts/coccinelle/array_size.cocci`
+    - scripts/coccinelle/deref_null.cocci`
+    - scripts/coccinelle/deref_null.cocci`
+    - scripts/coccinelle/deref_null.cocci`
+    - scripts/coccinelle/mini_lock.cocci`
+    - scripts/coccinelle/mini_lock.cocci`
+    - scripts/coccinelle/mini_lock.cocci`
+    - scripts/coccinelle/noderef.cocci`
+    - scripts/coccinelle/noderef.cocci`
+    - scripts/coccinelle/returnvar.cocci`
+    - scripts/coccinelle/semicolon.cocci`
+
+"GCOV Coverage Header File":
+  origin: GCC, the GNU Compiler Collection
+  license: GPLv2 License with Runtime Library Exception
+  impact:
+    This file is only linked into the firmware if :kconfig:option:`CONFIG_COVERAGE_GCOV` is
+    enabled.
+  files:
+    - subsys/testsuite/coverage/coverage.h`
+
+"ENE KB1200_EVB Board OpenOCD Configuration":
+  license: GPLv2
+  impact: |
+    This file is used by `OpenOCD`_ when programming and debugging the
+    :zephyr:board:`kb1200_evb` board. It is never linked into the firmware.
+  files:
+    - boards/ene/kb1200_evb/support/openocd.cfg`
+
+"Thread-Metric RTOS Test Suite Source Files":
+  origin: ThreadX
+  license: MIT
+  impact: These files are only linked into the Thread-Metric RTOS Test Suite test firmware.
+  files:
+    - tests/benchmarks/thread_metric/thread_metric_readme.txt`
+    - tests/benchmarks/thread_metric/src/tm_api.h`
+    - tests/benchmarks/thread_metric/src/tm_basic_processing_test.c`
+    - tests/benchmarks/thread_metric/src/tm_cooperative_scheduling_test.c`
+    - tests/benchmarks/thread_metric/src/tm_interrupt_preemption_processing_test.c`
+    - tests/benchmarks/thread_metric/src/tm_interrupt_processing_test.c`
+    - tests/benchmarks/thread_metric/src/tm_memory_allocation_test.c`
+    - tests/benchmarks/thread_metric/src/tm_message_processing_test.c`
+    - tests/benchmarks/thread_metric/src/tm_porting_layer.h`
+    - tests/benchmarks/thread_metric/src/tm_porting_layer_zephyr.c`
+    - tests/benchmarks/thread_metric/src/tm_preemptive_scheduling_test.c`
+    - tests/benchmarks/thread_metric/src/tm_synchronization_processing_test.c`
+
+"OpenThread Spinel HDLC RCP Host Interface Files":
+  origin: OpenThread
+  license: BSD-3-Clause
+  impact: |
+    These files are only linked into the firmware if :kconfig:option:`CONFIG_HDLC_RCP_IF` is
+    enabled.
+  files:
+    - modules/openthread/platform/hdlc_interface.hpp`
+    - modules/openthread/platform/radio_spinel.cpp`
+    - modules/openthread/platform/hdlc_interface.cpp`
+
+"Python Devicetree library test files":
+  license: BSD-3-Clause
+  impact: These are only used for testing and never linked with the firmware.
+  files:
+    - scripts/dts/python-devicetree/tests/test-bindings-2/multidir.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/allow-and-blocklist-child.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/allow-and-blocklist-multilevel.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/allow-and-blocklist.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/allow-not-list.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/allowlist.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/block-not-list.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/blocklist.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/empty-allowlist.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/empty-blocklist.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/include-2.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/include-invalid-keys.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/include-no-list.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/include-no-name.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/include.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/intermixed.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/simple.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/simple_filter_allowlist.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/simple_filter_blocklist.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-include/simple_inherit.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/base.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/base_amend.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/base_inherit.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/base_multi.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/compat_desc.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/compat_desc_base.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/compat_desc_multi.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/diamond.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/filter_allows_notblocked.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/filter_among_allowed.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/filter_among_notblocked.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/invalid_child_propconst.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/invalid_child_propdefault.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/invalid_child_propenum.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/invalid_child_propreq.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/invalid_child_proptype.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/invalid_grandchild_propconst.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/invalid_grandchild_propdefault.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/invalid_grandchild_propenum.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/invalid_grandchild_propreq.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/invalid_grandchild_proptype.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/invalid_propconst.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/invalid_propdefault.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/invalid_propenum.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/invalid_propreq.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/invalid_proptype.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/simple.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/simple_allowlist.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/simple_blocklist.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/simple_inherit.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/thing.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings-init/vnd,thing.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/bar-bus.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/child-binding-with-compat.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/child-binding.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/child.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/defaults.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/deprecated.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/device-on-any-bus.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/device-on-bar-bus.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/device-on-foo-bus.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/enums.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/foo-bus.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/gpio-dst.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/gpio-src.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/grandchild-1.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/grandchild-2.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/grandchild-3.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/interrupt-1-cell.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/interrupt-2-cell.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/interrupt-3-cell.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/multidir.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/order-1.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/order-2.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/parent.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/phandle-array-controller-0.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/phandle-array-controller-1.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/phandle-array-controller-2.yaml
+    - scripts/dts/python-devicetree/tests/test-bindings/props.yaml
+    - scripts/dts/python-devicetree/tests/test-multidir.dts
+    - scripts/dts/python-devicetree/tests/test-wrong-bindings/wrong-phandle-array-name.yaml
+    - scripts/dts/python-devicetree/tests/test-wrong-bindings/wrong-specifier-space-type.yaml
+    - scripts/dts/python-devicetree/tests/test.dts
+    - scripts/dts/python-devicetree/tests/test_dtlib.py
+    - scripts/dts/python-devicetree/tests/test_edtlib.py
+
+"FUSE Interface Definition Header File":
+  license: BSD-2-Clause
+  impact: |
+    This header is used in Zephyr build only if :kconfig:option:`CONFIG_FUSE_CLIENT` is enabled.
+  files:
+    - subsys/fs/fuse_client/fuse_abi.h`
