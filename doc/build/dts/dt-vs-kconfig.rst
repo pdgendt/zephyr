@@ -69,3 +69,42 @@ There are **exceptions** to these rules:
 * Devicetree's ``chosen`` keyword, which allows the user to select a specific
   instance of a hardware device to be used for a particular purpose. An example
   of this is selecting a particular UART for use as the system's console.
+
+Automatic Kconfig symbols from devicetree
+*****************************************
+
+During the devicetree processing step CMake runs
+:zephyr_file:`scripts/dts/gen_driver_kconfig_dts.py`, which scans every binding
+under :file:`dts/bindings` and writes ``Kconfig.dts`` into the build's
+``KCONFIG_BINARY_DIR`` (usually ``build/zephyr``). For each ``compatible =
+"vendor,chip"`` that appears in a binding, the generated file contains:
+
+.. code-block:: kconfig
+
+   DT_COMPAT_VENDOR_CHIP := vendor,chip
+
+   config DT_HAS_VENDOR_CHIP_ENABLED
+           def_bool $(dt_compat_enabled,$(DT_COMPAT_VENDOR_CHIP))
+
+The assignment keeps the literal ``compatible`` string available to the
+preprocessor functions described in :ref:`kconfig-functions`, so that Kconfig
+files can call helpers such as ``$(dt_compat_on_bus,$(DT_COMPAT_VENDOR_CHIP),i2c)``.
+Characters like ``-``, ``,`` and ``@`` are converted to underscores when the
+symbol names are created, which is why a Kconfig option would reference the
+generated identifier as ``DT_HAS_VENDOR_CHIP_ENABLED``.
+
+The hidden boolean symbol becomes ``CONFIG_DT_HAS_VENDOR_CHIP_ENABLED`` after
+Kconfig runs. Its value tracks whether the current devicetree contains at least
+one node with that ``compatible`` whose :ref:`status <dt-important-props>` is
+``okay``. Driver menus commonly use the symbol to guard options that only make
+sense when the hardware is present, for example:
+
+.. code-block:: kconfig
+
+   config SENSOR_VENDOR_CHIP
+           bool "Vendor Chip sensor"
+           depends on DT_HAS_VENDOR_CHIP_ENABLED
+
+Because these symbols are generated automatically, adding a new binding is all
+that is required to make the corresponding ``DT_HAS_*_ENABLED`` and ``DT_COMPAT_*``
+constructs available to Kconfig.
