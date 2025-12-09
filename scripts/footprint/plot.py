@@ -58,17 +58,12 @@ def main():
     values = []
     hovertext = []
 
+    idx = 0
     def iter_node(node: dict, parent=''):
-        identifier = node.get('identifier')
-        if identifier is None:
-            return
+        nonlocal idx
 
-        if identifier in ids:
-            # Identifiers aren't unique, add a suffix to make them unique
-            idx = 0
-            while f'{identifier}_{idx}' in ids:
-                idx += 1
-            identifier = f'{identifier}_{idx}'
+        identifier = f"node-{idx}"
+        idx += 1
 
         ids.append(identifier)
         labels.append(node.get('name', ''))
