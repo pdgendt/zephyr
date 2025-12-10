@@ -174,9 +174,9 @@ class Packages(WestCommand):
                 # https://github.com/python/cpython/issues/63323
                 # https://github.com/python/cpython/issues/101191
                 self.wrn(
-                    "Updating packages on Windows with 'west packages pip --install' can result in "
-                    "permission errors if pip tries to update packages that are currently in use.\n"
-                    "Using powershell instead run:\n"
+                    "Updating packages on Windows with 'west packages pip --install', that are"
+                    "currently in use, results in permission errors.\n"
+                    "To avoid this using powershell run the following command instead:\n"
                     f"{sys.executable} -m pip install @((west packages pip) -split ' ')"
                 )
                 subprocess.check_call(cmd)

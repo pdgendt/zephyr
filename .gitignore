@@ -4,7 +4,6 @@
 *.o
 *.a
 *.d
-*.cmd
 *.log
 *.pyc
 *.swp
