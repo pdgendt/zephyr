@@ -132,6 +132,7 @@ target_sources_ifdef(CONFIG_ATOMIC_OPERATIONS_C   kernel PRIVATE atomic_c.c)
 target_sources_ifdef(CONFIG_MMU                   kernel PRIVATE mmu.c)
 target_sources_ifdef(CONFIG_POLL                  kernel PRIVATE poll.c)
 target_sources_ifdef(CONFIG_EVENTS                kernel PRIVATE events.c)
+target_sources_ifdef(CONFIG_FUTURES               kernel PRIVATE future.c)
 target_sources_ifdef(CONFIG_SCHED_THREAD_USAGE    kernel PRIVATE usage.c)
 target_sources_ifdef(CONFIG_OBJ_CORE              kernel PRIVATE obj_core.c)
 

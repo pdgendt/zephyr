@@ -780,6 +780,16 @@ config EVENTS
 	  Note that setting this option slightly increases the size of the
 	  thread structure.
 
+config FUTURES
+	bool "Future and Promise objects"
+	depends on MULTITHREADING
+	help
+	  This option enables future and promise objects. A future represents
+	  the pending result of an asynchronous operation. A producer holds a
+	  promise and either resolves it with a value or rejects it with an
+	  error code. Threads waiting on the future are woken when it is
+	  settled.
+
 config KERNEL_MEM_POOL
 	bool "Use Kernel Memory Pool"
 	default y
