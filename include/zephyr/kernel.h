@@ -88,6 +88,7 @@ struct k_mem_partition;
 struct k_futex;
 struct k_event;
 struct k_future;
+struct k_future_cont;
 struct k_promise;
 
 enum execution_context_types {
@@ -2887,6 +2888,59 @@ static inline uint32_t k_event_test(struct k_event *event, uint32_t events_mask)
 /** @endcond */
 
 /**
+ * @name Future continuation trigger bits
+ * @{
+ */
+/** Fire when the future is resolved. */
+#define K_FUTURE_ON_RESOLVED  BIT(0)
+/** Fire when the future is rejected. */
+#define K_FUTURE_ON_REJECTED  BIT(1)
+/** Fire when the future is canceled. */
+#define K_FUTURE_ON_CANCELED  BIT(2)
+/** Fire when the future is resolved or rejected (but not canceled). */
+#define K_FUTURE_ON_SETTLED   (K_FUTURE_ON_RESOLVED | K_FUTURE_ON_REJECTED)
+/** Fire on any terminal state. */
+#define K_FUTURE_ON_ANY       (K_FUTURE_ON_SETTLED | K_FUTURE_ON_CANCELED)
+/** @} */
+
+/**
+ * @brief Callback type for a future continuation.
+ *
+ * Called directly in the settling thread's context (i.e. the thread that
+ * called k_promise_resolve(), k_promise_reject(), or k_future_cancel()) with
+ * no spinlocks held.  The callback may itself call k_promise_resolve() or
+ * k_promise_reject() on any other future.
+ *
+ * @param f   The future that was just settled.
+ * @param ctx User-supplied context pointer from struct k_future_cont.
+ */
+typedef void (*k_future_cb_t)(struct k_future *f, void *ctx);
+
+/**
+ * @brief Single-shot continuation attached to a future.
+ *
+ * Caller allocates and owns the storage.  Fill in @p cb, @p ctx,
+ * @p trigger (and optionally @p cancel_propagate), then pass to
+ * k_future_then().
+ */
+struct k_future_cont {
+/** @cond INTERNAL_HIDDEN */
+	void (*_fire)(struct k_future_cont *, struct k_future *);
+/** @endcond */
+	/** Callback invoked when the trigger fires; may be NULL. */
+	k_future_cb_t    cb;
+	/** Opaque context passed to @p cb. */
+	void            *ctx;
+	/**
+	 * If non-NULL, k_future_cancel() is called on this future whenever
+	 * the source future is canceled, enabling forward cancel propagation.
+	 */
+	struct k_future *cancel_propagate;
+	/** Bitmask of K_FUTURE_ON_* values controlling when @p cb fires. */
+	uint8_t          trigger;
+};
+
+/**
  * @brief Kernel Future structure
  *
  * A future represents the result of an asynchronous operation. It begins in
@@ -2898,13 +2952,14 @@ static inline uint32_t k_event_test(struct k_event *event, uint32_t events_mask)
  */
 struct k_future {
 /** @cond INTERNAL_HIDDEN */
-	atomic_t          state;
-	_wait_q_t         wait_q;
-	struct k_spinlock lock;
-	int               error;
-	void             *value;   /* resolved value pointer */
-	void            **out;     /* consumer output slot, set at init */
-	struct k_promise *promise; /* back-pointer set by k_future_get_promise */
+	atomic_t              state;
+	_wait_q_t             wait_q;
+	struct k_spinlock     lock;
+	int                   error;
+	void                 *value;   /* resolved value pointer */
+	void                **out;     /* consumer output slot, set at init */
+	struct k_promise     *promise; /* back-pointer set by k_future_get_promise */
+	struct k_future_cont *cont;    /* single continuation, NULL if none */
 /** @endcond */
 };
 
@@ -2937,6 +2992,7 @@ struct k_promise {
 	.value   = NULL, \
 	.out     = NULL, \
 	.promise = NULL, \
+	.cont    = NULL, \
 	}
 /** @endcond */
 
@@ -3137,6 +3193,31 @@ static inline bool k_future_is_canceled(const struct k_future *f)
  * @retval -EALREADY Future was already settled.
  */
 int k_future_cancel(struct k_future *f);
+
+/**
+ * @brief Register a continuation on a future.
+ *
+ * Attaches @p cont to @p f so that @p cont->cb is called (in the settling
+ * thread's context, with no spinlocks held) when the future enters a state
+ * matching @p cont->trigger.  If @p cont->cancel_propagate is non-NULL,
+ * k_future_cancel() is called on that future whenever @p f is canceled,
+ * regardless of @p cont->trigger.
+ *
+ * Only one continuation may be registered per future at a time.
+ *
+ * If the future is already settled when this is called, the callback fires
+ * synchronously before k_future_then() returns.
+ *
+ * @note Do not combine with k_future_wait() on the same future instance.
+ *       The continuation and blocking-wait are alternative consumption
+ *       patterns; using both is undefined behaviour.
+ *
+ * @param f    Address of the future.
+ * @param cont Caller-allocated continuation.  @p cont->cb, @p cont->ctx,
+ *             @p cont->trigger, and optionally @p cont->cancel_propagate
+ *             must be set before calling.
+ */
+void k_future_then(struct k_future *f, struct k_future_cont *cont);
 
 /** @} */
 #endif /* CONFIG_FUTURES */

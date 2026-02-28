@@ -22,9 +22,67 @@ void k_future_init(struct k_future *f, void **out)
 	f->value = NULL;
 	f->out = out;
 	f->promise = NULL;
+	f->cont = NULL;
 
 	k_object_init(f);
 }
+
+/* --- continuation helpers ------------------------------------------------ */
+
+static uint8_t state_to_trigger(int state)
+{
+	switch (state) {
+	case K_FUTURE_RESOLVED:
+		return K_FUTURE_ON_RESOLVED;
+	case K_FUTURE_REJECTED:
+		return K_FUTURE_ON_REJECTED;
+	case K_FUTURE_CANCELED:
+		return K_FUTURE_ON_CANCELED;
+	default:
+		return 0;
+	}
+}
+
+static void direct_fire(struct k_future_cont *cont, struct k_future *f)
+{
+	int state = atomic_get(&f->state);
+
+	if (cont->cb != NULL && (cont->trigger & state_to_trigger(state))) {
+		cont->cb(f, cont->ctx);
+	}
+
+	if (state == K_FUTURE_CANCELED && cont->cancel_propagate != NULL) {
+		k_future_cancel(cont->cancel_propagate);
+	}
+}
+
+/*
+ * Common registration helper.  The caller must have already set cont->_fire.
+ * If the future is already settled the continuation is fired immediately,
+ * synchronously, in the caller's thread context.
+ */
+static void register_cont(struct k_future *f, struct k_future_cont *cont)
+{
+	k_spinlock_key_t key = k_spin_lock(&f->lock);
+	int state = atomic_get(&f->state);
+
+	if (state == K_FUTURE_PENDING) {
+		__ASSERT_NO_MSG(f->cont == NULL);
+		f->cont = cont;
+		k_spin_unlock(&f->lock, key);
+	} else {
+		k_spin_unlock(&f->lock, key);
+		cont->_fire(cont, f);
+	}
+}
+
+void k_future_then(struct k_future *f, struct k_future_cont *cont)
+{
+	cont->_fire = direct_fire;
+	register_cont(f, cont);
+}
+
+/* --- settle helpers ------------------------------------------------------- */
 
 /*
  * Both resolve and reject acquire p->lock before f->lock (lock ordering).
@@ -32,6 +90,11 @@ void k_future_init(struct k_future *f, void **out)
  *
  * p->future is NULLed under p->lock by all three paths so the producer never
  * dereferences a future that may have gone out of scope.
+ *
+ * The continuation (if any) is extracted under f->lock so it fires exactly
+ * once, then called after all locks are released so the callback can itself
+ * call k_promise_resolve() / k_promise_reject() / k_future_cancel() on any
+ * other future without re-entering any held lock.
  */
 
 int k_promise_resolve(struct k_promise *p, void *value)
@@ -62,7 +125,10 @@ int k_promise_resolve(struct k_promise *p, void *value)
 	if (f->out != NULL) {
 		*f->out = value;
 	}
-	p->future = NULL; /* sever link — future may go out of scope after consumer wakes */
+	p->future = NULL; /* sever link */
+
+	struct k_future_cont *cont = f->cont;
+	f->cont = NULL;
 
 	struct k_thread *thread;
 
@@ -73,6 +139,10 @@ int k_promise_resolve(struct k_promise *p, void *value)
 
 	k_spin_unlock(&f->lock, fk);
 	z_reschedule(&p->lock, pk);
+
+	if (cont != NULL) {
+		cont->_fire(cont, f);
+	}
 
 	return 0;
 }
@@ -103,6 +173,9 @@ int k_promise_reject(struct k_promise *p, int error)
 	atomic_set(&f->state, K_FUTURE_REJECTED);
 	p->future = NULL; /* sever link */
 
+	struct k_future_cont *cont = f->cont;
+	f->cont = NULL;
+
 	struct k_thread *thread;
 
 	while ((thread = z_unpend_first_thread(&f->wait_q)) != NULL) {
@@ -112,6 +185,10 @@ int k_promise_reject(struct k_promise *p, int error)
 
 	k_spin_unlock(&f->lock, fk);
 	z_reschedule(&p->lock, pk);
+
+	if (cont != NULL) {
+		cont->_fire(cont, f);
+	}
 
 	return 0;
 }
@@ -142,6 +219,9 @@ int k_future_cancel(struct k_future *f)
 	atomic_set(&p->canceled, 1);
 	p->future = NULL; /* sever link — f may go out of scope after we return */
 
+	struct k_future_cont *cont = f->cont;
+	f->cont = NULL;
+
 	struct k_thread *thread;
 
 	while ((thread = z_unpend_first_thread(&f->wait_q)) != NULL) {
@@ -151,6 +231,10 @@ int k_future_cancel(struct k_future *f)
 
 	k_spin_unlock(&f->lock, fk);
 	z_reschedule(&p->lock, pk);
+
+	if (cont != NULL) {
+		cont->_fire(cont, f);
+	}
 
 	return 0;
 }
