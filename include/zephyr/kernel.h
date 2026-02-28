@@ -2887,151 +2887,159 @@ static inline uint32_t k_event_test(struct k_event *event, uint32_t events_mask)
 /** @endcond */
 
 /**
- * @brief Kernel Promise structure
+ * @brief Kernel Future structure
  *
- * A promise is the primary shared control block for an asynchronous operation.
- * The producer initializes and owns the promise; the consumer receives a thin
- * @ref k_future handle via k_promise_get_future(). All state lives in the
- * promise so that the consumer's future handle can be discarded safely after
- * the operation completes or is canceled.
+ * A future represents the result of an asynchronous operation. It begins in
+ * the PENDING state and transitions exactly once to one of: RESOLVED (success
+ * with a value), REJECTED (failure with a negative error code), or CANCELED
+ * (consumer-initiated cancellation).
  *
  * All members are internal and should not be accessed directly.
  */
-struct k_promise {
+struct k_future {
 /** @cond INTERNAL_HIDDEN */
 	atomic_t          state;
 	_wait_q_t         wait_q;
 	struct k_spinlock lock;
 	int               error;
-	void             *value;  /* resolved value pointer */
-	void            **out;    /* consumer output slot, set at init */
+	void             *value;   /* resolved value pointer */
+	void            **out;     /* consumer output slot, set at init */
+	struct k_promise *promise; /* back-pointer set by k_future_get_promise */
 /** @endcond */
 };
 
 /**
- * @brief Kernel Future structure
+ * @brief Kernel Promise structure
  *
- * A future is the consumer-side handle for a @ref k_promise. It contains
- * only a pointer to the promise; all state is stored there. Obtain a future
- * from an initialized promise with k_promise_get_future().
+ * A promise is the write-side handle for a future. The producer holds a
+ * promise and calls k_promise_resolve() or k_promise_reject() to settle it.
+ *
+ * The promise contains a spinlock protecting its forward pointer to the future.
+ * This ensures that once k_future_cancel() returns and the future may go out
+ * of scope, any subsequent k_promise_resolve() or k_promise_reject() call sees
+ * a NULL pointer and returns -ECANCELED without dereferencing the future.
  */
-struct k_future {
+struct k_promise {
 /** @cond INTERNAL_HIDDEN */
-	struct k_promise *promise;
+	struct k_spinlock lock;    /* protects the future pointer */
+	struct k_future  *future;  /* NULLed by cancel or after settle */
+	atomic_t          canceled;
 /** @endcond */
 };
 
 /** @cond INTERNAL_HIDDEN */
-#define Z_PROMISE_INITIALIZER(obj, _out) \
+#define Z_FUTURE_INITIALIZER(obj) \
 	{ \
-	.state  = K_FUTURE_PENDING, \
-	.wait_q = Z_WAIT_Q_INIT(&(obj).wait_q), \
-	.lock   = {}, \
-	.error  = 0, \
-	.value  = NULL, \
-	.out    = (_out), \
+	.state   = K_FUTURE_PENDING, \
+	.wait_q  = Z_WAIT_Q_INIT(&(obj).wait_q), \
+	.lock    = {}, \
+	.error   = 0, \
+	.value   = NULL, \
+	.out     = NULL, \
+	.promise = NULL, \
 	}
 /** @endcond */
 
 /**
- * @brief Statically define and initialize a promise object
+ * @brief Statically define and initialize a future object
  *
- * The promise can be accessed outside the module where it is defined using:
+ * The future can be accessed outside the module where it is defined using:
  *
- * @code extern struct k_promise <name>; @endcode
+ * @code extern struct k_future <name>; @endcode
  *
- * @param name    Name of the promise object.
- * @param out_ptr Pointer to a @c void* variable that will receive the resolved
- *                value, or NULL.
+ * @param name Name of the future object.
  */
-#define K_PROMISE_DEFINE(name, out_ptr) \
-	STRUCT_SECTION_ITERABLE(k_promise, name) = \
-		Z_PROMISE_INITIALIZER(name, out_ptr)
+#define K_FUTURE_DEFINE(name) \
+	STRUCT_SECTION_ITERABLE(k_future, name) = \
+		Z_FUTURE_INITIALIZER(name)
 
 /**
- * @brief Initialize a promise object
+ * @brief Initialize a future object
  *
- * Must be called by the producer before handing a future to any consumer.
- *
- * @param p   Address of the promise to initialize.
+ * @param f   Address of the future to initialize.
  * @param out Pointer to a @c void* variable that will receive the resolved
- *            value when the promise is settled, or NULL if the caller will
+ *            value when the future is settled, or NULL if the caller will
  *            retrieve the value via k_future_get_value().
  */
-void k_promise_init(struct k_promise *p, void **out);
+void k_future_init(struct k_future *f, void **out);
 
 /**
- * @brief Obtain a consumer future handle from a promise
+ * @brief Obtain a promise handle for the given future
  *
- * Links @p f to @p p so that the consumer can call k_future_wait() and
- * inspect the result. @p f must not already point to a promise.
+ * Links @p p to @p f so that the producer can call k_promise_resolve() or
+ * k_promise_reject() to settle the future. Also stores a back-pointer from
+ * @p f to @p p so that k_future_cancel() can safely sever the link.
  *
- * @param p Address of the initialized promise.
- * @param f Address of the future to link.
+ * @param f Address of the future.
+ * @param p Address of the promise to initialize.
  */
-static inline void k_promise_get_future(struct k_promise *p, struct k_future *f)
+static inline void k_future_get_promise(struct k_future *f, struct k_promise *p)
 {
-	__ASSERT_NO_MSG(f->promise == NULL);
+	p->lock = (struct k_spinlock){};
+	p->future = f;
+	atomic_set(&p->canceled, 0);
 	f->promise = p;
 }
 
 /**
- * @brief Resolve a promise with a value
+ * @brief Resolve a future with a value
  *
- * Transitions the promise from PENDING to RESOLVED and wakes all waiting
- * threads. If a consumer registered an output slot via k_promise_init(), the
- * pointer @p value is written into that slot. No-op if already settled.
+ * Transitions the future from PENDING to RESOLVED and wakes all waiting
+ * threads. If a consumer registered an output slot via k_future_init(), the
+ * pointer @p value is written into that slot. No-op if the future is already
+ * resolved or rejected.
  *
  * @param p     Address of the promise.
  * @param value Pointer to deliver to the consumer (may be NULL).
- * @retval 0          Success.
- * @retval -ECANCELED Promise was canceled by the consumer.
- * @retval -EALREADY  Promise was already resolved or rejected.
+ * @retval 0         Success.
+ * @retval -ECANCELED Future was canceled by the consumer.
+ * @retval -EALREADY  Future was already resolved or rejected.
  */
 int k_promise_resolve(struct k_promise *p, void *value);
 
 /**
- * @brief Reject a promise with an error code
+ * @brief Reject a future with an error code
  *
- * Transitions the promise from PENDING to REJECTED and wakes all waiting
- * threads. No-op if already settled.
+ * Transitions the future from PENDING to REJECTED and wakes all waiting
+ * threads. No-op if the future is already resolved or rejected.
  *
  * @param p     Address of the promise.
  * @param error Negative error code (e.g. -ENODEV). Must be < 0.
- * @retval 0          Success.
- * @retval -ECANCELED Promise was canceled by the consumer.
- * @retval -EALREADY  Promise was already resolved or rejected.
- * @retval -EINVAL    @p error was >= 0.
+ * @retval 0         Success.
+ * @retval -ECANCELED Future was canceled by the consumer.
+ * @retval -EALREADY  Future was already resolved or rejected.
+ * @retval -EINVAL   @p error was >= 0.
  */
 int k_promise_reject(struct k_promise *p, int error);
 
 /**
- * @brief Test whether the promise has been canceled
+ * @brief Test whether the underlying future has been canceled
  *
- * Convenience for producers to poll for consumer-initiated cancellation
- * without needing the future handle.
+ * Convenience for producers to poll for consumer-initiated cancellation.
+ * Safe to call at any point — reads only the promise's own @c canceled flag
+ * and never dereferences the future pointer.
  *
  * @param p Address of the promise.
- * @retval true  The promise has been canceled.
- * @retval false The promise has not been canceled.
+ * @retval true  The future has been canceled.
+ * @retval false The future has not been canceled.
  */
 static inline bool k_promise_is_canceled(const struct k_promise *p)
 {
-	return atomic_get((atomic_t *)&p->state) == K_FUTURE_CANCELED;
+	return atomic_get((atomic_t *)&p->canceled) != 0;
 }
 
 /**
- * @brief Wait for a promise to be settled
+ * @brief Wait for a future to be settled
  *
- * Blocks the calling thread until the underlying promise is resolved,
- * rejected, or canceled, or until @p timeout elapses. If an output slot was
- * registered via k_promise_init() and the promise is resolved, the resolved
- * value is written into that slot by the settling thread.
+ * Blocks the calling thread until the future is resolved, rejected, or
+ * canceled, or until @p timeout elapses. If an output slot was registered via
+ * k_future_init() and the future is resolved, the resolved value is written
+ * into that slot by the settling thread.
  *
  * @param f       Address of the future.
  * @param timeout Waiting period, or K_NO_WAIT / K_FOREVER.
- * @retval 0       Promise has been settled (check state with k_future_is_*).
- * @retval -EAGAIN Timeout elapsed before the promise was settled.
+ * @retval 0       Future has been settled (check state with k_future_is_*).
+ * @retval -EAGAIN Timeout elapsed before the future was settled.
  */
 int k_future_wait(struct k_future *f, k_timeout_t timeout);
 
@@ -3045,7 +3053,7 @@ int k_future_wait(struct k_future *f, k_timeout_t timeout);
  */
 static inline void *k_future_get_value(const struct k_future *f)
 {
-	return f->promise->value;
+	return f->value;
 }
 
 /**
@@ -3058,70 +3066,75 @@ static inline void *k_future_get_value(const struct k_future *f)
  */
 static inline int k_future_get_error(const struct k_future *f)
 {
-	return f->promise->error;
+	return f->error;
 }
 
 /**
  * @brief Test whether a future is still pending
  *
  * @param f Address of the future.
- * @retval true  Promise has not yet been settled.
- * @retval false Promise has been resolved, rejected, or canceled.
+ * @retval true  Future has not yet been settled.
+ * @retval false Future has been resolved, rejected, or canceled.
  */
 static inline bool k_future_is_pending(const struct k_future *f)
 {
-	return atomic_get((atomic_t *)&f->promise->state) == K_FUTURE_PENDING;
+	return atomic_get((atomic_t *)&f->state) == K_FUTURE_PENDING;
 }
 
 /**
  * @brief Test whether a future was resolved successfully
  *
  * @param f Address of the future.
- * @retval true  Promise was resolved.
- * @retval false Promise is pending or was rejected/canceled.
+ * @retval true  Future was resolved.
+ * @retval false Future is pending or was rejected.
  */
 static inline bool k_future_is_resolved(const struct k_future *f)
 {
-	return atomic_get((atomic_t *)&f->promise->state) == K_FUTURE_RESOLVED;
+	return atomic_get((atomic_t *)&f->state) == K_FUTURE_RESOLVED;
 }
 
 /**
  * @brief Test whether a future was rejected
  *
  * @param f Address of the future.
- * @retval true  Promise was rejected.
- * @retval false Promise is pending, was resolved, or was canceled.
+ * @retval true  Future was rejected.
+ * @retval false Future is pending, was resolved, or was canceled.
  */
 static inline bool k_future_is_rejected(const struct k_future *f)
 {
-	return atomic_get((atomic_t *)&f->promise->state) == K_FUTURE_REJECTED;
+	return atomic_get((atomic_t *)&f->state) == K_FUTURE_REJECTED;
 }
 
 /**
  * @brief Test whether a future was canceled
  *
  * @param f Address of the future.
- * @retval true  Promise was canceled.
- * @retval false Promise is pending, was resolved, or was rejected.
+ * @retval true  Future was canceled.
+ * @retval false Future is pending, was resolved, or was rejected.
  */
 static inline bool k_future_is_canceled(const struct k_future *f)
 {
-	return atomic_get((atomic_t *)&f->promise->state) == K_FUTURE_CANCELED;
+	return atomic_get((atomic_t *)&f->state) == K_FUTURE_CANCELED;
 }
 
 /**
  * @brief Cancel a pending future
  *
- * Transitions the underlying promise from PENDING to CANCELED and wakes all
- * waiting threads. No value is delivered to any registered output slot. No-op
- * if the promise is already settled.
+ * Transitions the future from PENDING to CANCELED and wakes all waiting
+ * threads. No value is delivered to any registered output slot. No-op if the
+ * future is already settled.
+ *
+ * Before returning, severs the producer's @p p->future pointer so that any
+ * subsequent k_promise_resolve() or k_promise_reject() call returns
+ * -ECANCELED without dereferencing the future, which may have gone out of
+ * scope after this call returns.
  *
  * Producers should poll k_promise_is_canceled() to detect cancellation and
  * stop work early.
  *
  * @param f Address of the future.
- * @retval 0         Success.
- * @retval -EALREADY Promise was already settled.
+ * @retval 0        Success.
+ * @retval -EALREADY Future was already settled.
  */
 int k_future_cancel(struct k_future *f);
 
