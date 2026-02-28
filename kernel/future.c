@@ -11,108 +11,141 @@
 #include <ksched.h>
 #include <wait_q.h>
 
-void k_future_init(struct k_future *f)
+void k_promise_init(struct k_promise *p, void **out)
 {
 	__ASSERT_NO_MSG(!arch_is_in_isr());
 
-	atomic_set(&f->state, K_FUTURE_PENDING);
-	z_waitq_init(&f->wait_q);
-	f->lock = (struct k_spinlock){};
-	f->error = 0;
-	f->value = NULL;
-	f->out = NULL;
+	atomic_set(&p->state, K_FUTURE_PENDING);
+	z_waitq_init(&p->wait_q);
+	p->lock = (struct k_spinlock){};
+	p->error = 0;
+	p->value = NULL;
+	p->out = out;
 
-	k_object_init(f);
-}
-
-static int future_settle(struct k_future *f, int new_state, void *value, int error)
-{
-	struct k_thread *thread;
-	k_spinlock_key_t key = k_spin_lock(&f->lock);
-
-	if (atomic_get(&f->state) != K_FUTURE_PENDING) {
-		k_spin_unlock(&f->lock, key);
-		return -EALREADY;
-	}
-
-	f->value = value;
-	f->error = error;
-	atomic_set(&f->state, new_state);
-
-	if (new_state == K_FUTURE_RESOLVED && f->out != NULL) {
-		*f->out = value;
-		f->out = NULL;
-	} else {
-		f->out = NULL;
-	}
-
-	while ((thread = z_unpend_first_thread(&f->wait_q)) != NULL) {
-		arch_thread_return_value_set(thread, 0);
-		z_ready_thread(thread);
-	}
-
-	z_reschedule(&f->lock, key);
-
-	return 0;
+	k_object_init(p);
 }
 
 int k_promise_resolve(struct k_promise *p, void *value)
 {
-	return future_settle(p->future, K_FUTURE_RESOLVED, value, 0);
+	struct k_thread *thread;
+	k_spinlock_key_t key = k_spin_lock(&p->lock);
+	int state = atomic_get(&p->state);
+
+	if (state == K_FUTURE_CANCELED) {
+		k_spin_unlock(&p->lock, key);
+		return -ECANCELED;
+	}
+
+	if (state != K_FUTURE_PENDING) {
+		k_spin_unlock(&p->lock, key);
+		return -EALREADY;
+	}
+
+	p->value = value;
+	atomic_set(&p->state, K_FUTURE_RESOLVED);
+
+	if (p->out != NULL) {
+		*p->out = value;
+	}
+
+	while ((thread = z_unpend_first_thread(&p->wait_q)) != NULL) {
+		arch_thread_return_value_set(thread, 0);
+		z_ready_thread(thread);
+	}
+
+	z_reschedule(&p->lock, key);
+
+	return 0;
 }
 
 int k_promise_reject(struct k_promise *p, int error)
 {
+	struct k_thread *thread;
+
 	CHECKIF(error >= 0) {
 		return -EINVAL;
 	}
 
-	return future_settle(p->future, K_FUTURE_REJECTED, NULL, error);
+	k_spinlock_key_t key = k_spin_lock(&p->lock);
+	int state = atomic_get(&p->state);
+
+	if (state == K_FUTURE_CANCELED) {
+		k_spin_unlock(&p->lock, key);
+		return -ECANCELED;
+	}
+
+	if (state != K_FUTURE_PENDING) {
+		k_spin_unlock(&p->lock, key);
+		return -EALREADY;
+	}
+
+	p->error = error;
+	atomic_set(&p->state, K_FUTURE_REJECTED);
+
+	while ((thread = z_unpend_first_thread(&p->wait_q)) != NULL) {
+		arch_thread_return_value_set(thread, 0);
+		z_ready_thread(thread);
+	}
+
+	z_reschedule(&p->lock, key);
+
+	return 0;
 }
 
 int k_future_cancel(struct k_future *f)
 {
 	__ASSERT_NO_MSG(!arch_is_in_isr());
+	__ASSERT_NO_MSG(f->promise != NULL);
 
-	return future_settle(f, K_FUTURE_CANCELED, NULL, 0);
+	struct k_promise *p = f->promise;
+	struct k_thread *thread;
+	k_spinlock_key_t key = k_spin_lock(&p->lock);
+
+	if (atomic_get(&p->state) != K_FUTURE_PENDING) {
+		k_spin_unlock(&p->lock, key);
+		return -EALREADY;
+	}
+
+	atomic_set(&p->state, K_FUTURE_CANCELED);
+
+	while ((thread = z_unpend_first_thread(&p->wait_q)) != NULL) {
+		arch_thread_return_value_set(thread, 0);
+		z_ready_thread(thread);
+	}
+
+	z_reschedule(&p->lock, key);
+
+	return 0;
 }
 
-int k_future_wait(struct k_future *f, void **out, k_timeout_t timeout)
+int k_future_wait(struct k_future *f, k_timeout_t timeout)
 {
 	__ASSERT_NO_MSG(!arch_is_in_isr());
+	__ASSERT_NO_MSG(f->promise != NULL);
 
-	k_spinlock_key_t key = k_spin_lock(&f->lock);
+	struct k_promise *p = f->promise;
+	k_spinlock_key_t key = k_spin_lock(&p->lock);
 
-	if (atomic_get(&f->state) != K_FUTURE_PENDING) {
-		if (out != NULL && atomic_get(&f->state) == K_FUTURE_RESOLVED) {
-			*out = f->value;
-		}
-		k_spin_unlock(&f->lock, key);
+	if (atomic_get(&p->state) != K_FUTURE_PENDING) {
+		k_spin_unlock(&p->lock, key);
 		return 0;
 	}
 
-	f->out = out;
-	int ret = z_pend_curr(&f->lock, key, &f->wait_q, timeout);
+	int ret = z_pend_curr(&p->lock, key, &p->wait_q, timeout);
 
 	if (ret == -EAGAIN) {
 		/*
-		 * Timed out. Re-acquire the lock to safely inspect and clear
-		 * f->out before this thread's stack slot becomes invalid.
-		 *
-		 * If the future settled concurrently with the timeout (i.e.
-		 * future_settle already wrote *f->out and cleared f->out),
-		 * the state is no longer PENDING and we treat the wait as
-		 * successful rather than returning -EAGAIN.
+		 * Timed out. Re-acquire the lock to safely inspect the state.
+		 * If the promise settled concurrently with the timeout, treat
+		 * the wait as successful rather than returning -EAGAIN.
 		 */
-		k_spinlock_key_t key2 = k_spin_lock(&f->lock);
+		k_spinlock_key_t key2 = k_spin_lock(&p->lock);
 
-		if (atomic_get(&f->state) != K_FUTURE_PENDING) {
+		if (atomic_get(&p->state) != K_FUTURE_PENDING) {
 			ret = 0;
-		} else {
-			f->out = NULL;
 		}
 
-		k_spin_unlock(&f->lock, key2);
+		k_spin_unlock(&p->lock, key2);
 	}
 
 	return ret;
