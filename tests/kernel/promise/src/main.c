@@ -246,7 +246,7 @@ ZTEST(promise, test_promise_is_canceled)
 }
 
 /* =========================================================================
- * k_promise_settle tests
+ * k_promise_settle and result macro tests
  * ========================================================================= */
 
 ZTEST(promise, test_settle_resolves)
@@ -254,7 +254,7 @@ ZTEST(promise, test_settle_resolves)
 	struct k_future f;
 	struct k_promise p;
 	void *val = (void *)0x1234;
-	struct k_future_result res = {.status = 0, .value = val};
+	struct k_future_result res = K_FUTURE_RESULT_RESOLVE(val);
 
 	k_future_init(&f);
 	k_promise_init(&p, &f);
@@ -269,7 +269,7 @@ ZTEST(promise, test_settle_rejects)
 {
 	struct k_future f;
 	struct k_promise p;
-	struct k_future_result res = {.status = -ENODEV};
+	struct k_future_result res = K_FUTURE_RESULT_REJECT(-ENODEV);
 
 	k_future_init(&f);
 	k_promise_init(&p, &f);
@@ -280,16 +280,26 @@ ZTEST(promise, test_settle_rejects)
 	zassert_equal(k_future_get_error(&f), -ENODEV);
 }
 
+ZTEST(promise, test_result_macros)
+{
+	struct k_future_result resolve = K_FUTURE_RESULT_RESOLVE((void *)0xBEEF);
+	struct k_future_result reject  = K_FUTURE_RESULT_REJECT(-ETIMEDOUT);
+
+	zassert_equal(resolve.status, 0);
+	zassert_equal(resolve.value, (void *)0xBEEF);
+
+	zassert_equal(reject.status, -ETIMEDOUT);
+}
+
 ZTEST(promise, test_get_result)
 {
 	struct k_future f;
 	struct k_promise p;
 	void *val = (void *)0xABCD;
-	struct k_future_result res = {.status = 0, .value = val};
 
 	k_future_init(&f);
 	k_promise_init(&p, &f);
-	k_promise_settle(&p, &res);
+	k_promise_settle(&p, &(struct k_future_result)K_FUTURE_RESULT_RESOLVE(val));
 
 	struct k_future_result got = k_future_get_result(&f);
 
@@ -632,24 +642,112 @@ ZTEST(promise, test_cont_fires_immediately_when_already_canceled)
 }
 
 /* =========================================================================
- * Cancel propagation
+ * k_future_catch / k_future_finally
+ * ========================================================================= */
+
+ZTEST(promise, test_catch_fires_on_reject)
+{
+	struct k_future f;
+	struct k_promise p;
+	atomic_t count;
+	struct k_future_cont cont = { .cb = cb_count, .ctx = &count };
+
+	atomic_set(&count, 0);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
+
+	/* k_future_catch sets trigger = ON_REJECTED */
+	k_future_catch(&f, &cont);
+	k_promise_reject(&p, -EIO);
+
+	zassert_equal(atomic_get(&count), 1);
+}
+
+ZTEST(promise, test_catch_not_fired_on_resolve)
+{
+	struct k_future f;
+	struct k_promise p;
+	atomic_t count;
+	struct k_future_cont cont = { .cb = cb_count, .ctx = &count };
+
+	atomic_set(&count, 0);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
+	k_future_catch(&f, &cont);
+
+	k_promise_resolve(&p, NULL);
+
+	zassert_equal(atomic_get(&count), 0);
+}
+
+ZTEST(promise, test_finally_fires_on_resolve)
+{
+	struct k_future f;
+	struct k_promise p;
+	atomic_t count;
+	struct k_future_cont cont = { .cb = cb_count, .ctx = &count };
+
+	atomic_set(&count, 0);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
+
+	/* k_future_finally sets trigger = ON_ANY */
+	k_future_finally(&f, &cont);
+	k_promise_resolve(&p, NULL);
+
+	zassert_equal(atomic_get(&count), 1);
+}
+
+ZTEST(promise, test_finally_fires_on_reject)
+{
+	struct k_future f;
+	struct k_promise p;
+	atomic_t count;
+	struct k_future_cont cont = { .cb = cb_count, .ctx = &count };
+
+	atomic_set(&count, 0);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
+	k_future_finally(&f, &cont);
+
+	k_promise_reject(&p, -EIO);
+
+	zassert_equal(atomic_get(&count), 1);
+}
+
+ZTEST(promise, test_finally_fires_on_cancel)
+{
+	struct k_future f;
+	struct k_promise p;
+	atomic_t count;
+	struct k_future_cont cont = { .cb = cb_count, .ctx = &count };
+
+	atomic_set(&count, 0);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
+	k_future_finally(&f, &cont);
+
+	k_future_cancel(&f);
+
+	zassert_equal(atomic_get(&count), 1);
+}
+
+/* =========================================================================
+ * Cancel propagation via k_future_link_cancel
  * ========================================================================= */
 
 ZTEST(promise, test_cancel_propagate)
 {
 	struct k_future fA, fB;
 	struct k_promise pA, pB;
-	struct k_future_cont cont = {
-		/* cb is NULL — propagation alone is enough. */
-		.cancel_propagate = &fB,
-	};
+	struct k_future_cancel_link link;
 
 	k_future_init(&fA);
 	k_promise_init(&pA, &fA);
 	k_future_init(&fB);
 	k_promise_init(&pB, &fB);
 
-	k_future_then(&fA, &cont);
+	k_future_link_cancel(&fA, &fB, &link);
 
 	zassert_false(k_future_is_canceled(&fB));
 
@@ -663,16 +761,14 @@ ZTEST(promise, test_cancel_propagate_not_triggered_on_resolve)
 {
 	struct k_future fA, fB;
 	struct k_promise pA, pB;
-	struct k_future_cont cont = {
-		.cancel_propagate = &fB,
-	};
+	struct k_future_cancel_link link;
 
 	k_future_init(&fA);
 	k_promise_init(&pA, &fA);
 	k_future_init(&fB);
 	k_promise_init(&pB, &fB);
 
-	k_future_then(&fA, &cont);
+	k_future_link_cancel(&fA, &fB, &link);
 
 	k_promise_resolve(&pA, NULL);
 
@@ -684,8 +780,7 @@ ZTEST(promise, test_cancel_propagate_chain)
 {
 	struct k_future fA, fB, fC;
 	struct k_promise pA, pB, pC;
-	struct k_future_cont contAB = { .cancel_propagate = &fB };
-	struct k_future_cont contBC = { .cancel_propagate = &fC };
+	struct k_future_cancel_link linkAB, linkBC;
 
 	k_future_init(&fA);
 	k_promise_init(&pA, &fA);
@@ -694,8 +789,8 @@ ZTEST(promise, test_cancel_propagate_chain)
 	k_future_init(&fC);
 	k_promise_init(&pC, &fC);
 
-	k_future_then(&fA, &contAB);
-	k_future_then(&fB, &contBC);
+	k_future_link_cancel(&fA, &fB, &linkAB);
+	k_future_link_cancel(&fB, &fC, &linkBC);
 
 	k_future_cancel(&fA);
 
@@ -703,6 +798,27 @@ ZTEST(promise, test_cancel_propagate_chain)
 	zassert_true(k_future_is_canceled(&fA));
 	zassert_true(k_future_is_canceled(&fB));
 	zassert_true(k_future_is_canceled(&fC));
+}
+
+ZTEST(promise, test_cancel_link_already_canceled_fires_immediately)
+{
+	struct k_future fA, fB;
+	struct k_promise pA, pB;
+	struct k_future_cancel_link link;
+
+	k_future_init(&fA);
+	k_promise_init(&pA, &fA);
+	k_future_init(&fB);
+	k_promise_init(&pB, &fB);
+
+	/* Cancel fA first, then register the link — must fire immediately. */
+	k_future_cancel(&fA);
+
+	zassert_false(k_future_is_canceled(&fB));
+
+	k_future_link_cancel(&fA, &fB, &link);
+
+	zassert_true(k_future_is_canceled(&fB));
 }
 
 /* =========================================================================

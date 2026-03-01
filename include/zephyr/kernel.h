@@ -88,6 +88,7 @@ struct k_mem_partition;
 struct k_futex;
 struct k_event;
 struct k_future;
+struct k_future_cancel_link;
 struct k_future_cont;
 struct k_future_result;
 struct k_promise;
@@ -2920,11 +2921,30 @@ struct k_future_result {
 };
 
 /**
+ * @brief Construct a resolved @ref k_future_result for use with k_promise_settle().
+ *
+ * @param _val Value pointer to deliver to the consumer (may be NULL).
+ */
+#define K_FUTURE_RESULT_RESOLVE(_val) \
+	((struct k_future_result){ .status = 0, .value = (_val) })
+
+/**
+ * @brief Construct a rejected @ref k_future_result for use with k_promise_settle().
+ *
+ * @param _err Negative errno value (e.g. -ETIMEDOUT).
+ */
+#define K_FUTURE_RESULT_REJECT(_err) \
+	((struct k_future_result){ .status = (_err) })
+
+/**
  * @brief Callback type for a future continuation.
  *
  * Called directly in the settling thread's context (i.e. the thread that
- * called k_promise_settle(), or k_future_cancel()) with no spinlocks held.
+ * called k_promise_settle() or k_future_cancel()) with no spinlocks held.
  * The callback may itself call k_promise_settle() on any other future.
+ *
+ * @note May be safely called from ISR context only if the callback itself
+ *       is ISR-safe.
  *
  * @param f   The future that was just settled.
  * @param ctx User-supplied context pointer from struct k_future_cont.
@@ -2934,25 +2954,34 @@ typedef void (*k_future_cb_t)(struct k_future *f, void *ctx);
 /**
  * @brief Single-shot continuation attached to a future.
  *
- * Caller allocates and owns the storage.  Fill in @p cb, @p ctx,
- * @p trigger (and optionally @p cancel_propagate), then pass to
- * k_future_then().
+ * Caller allocates and owns the storage.  Fill in @p cb, @p ctx, and
+ * @p trigger, then pass to k_future_then(), k_future_catch(), or
+ * k_future_finally().
+ *
+ * Cancel-forward links are registered separately via k_future_link_cancel().
  */
 struct k_future_cont {
-/** @cond INTERNAL_HIDDEN */
-	void (*_fire)(struct k_future_cont *, struct k_future *);
-/** @endcond */
 	/** Callback invoked when the trigger fires; may be NULL. */
 	k_future_cb_t    cb;
 	/** Opaque context passed to @p cb. */
 	void            *ctx;
-	/**
-	 * If non-NULL, k_future_cancel() is called on this future whenever
-	 * the source future is canceled, enabling forward cancel propagation.
-	 */
-	struct k_future *cancel_propagate;
 	/** Bitmask of K_FUTURE_ON_* values controlling when @p cb fires. */
 	uint8_t          trigger;
+};
+
+/**
+ * @brief Node for a cancel-forward link between two futures.
+ *
+ * Caller allocates and owns the storage.  Pass to k_future_link_cancel().
+ * The node must remain valid until either the source future is settled
+ * or the caller guarantees k_future_cancel() will no longer be called on
+ * the source.
+ */
+struct k_future_cancel_link {
+/** @cond INTERNAL_HIDDEN */
+	struct k_future             *dst;
+	struct k_future_cancel_link *_next;
+/** @endcond */
 };
 
 /**
@@ -2970,9 +2999,11 @@ struct k_future {
 	atomic_t              state;
 	_wait_q_t             wait_q;
 	struct k_spinlock     lock;
-	struct k_future_result result; /* set by k_promise_settle */
-	struct k_promise     *promise; /* back-pointer set by k_promise_init */
-	struct k_future_cont *cont;    /* single continuation, NULL if none */
+	struct k_future_result result;      /* set by k_promise_settle */
+	struct k_promise     *promise;      /* back-pointer set by k_promise_init */
+	struct k_future_cont *cont;         /* registered continuation, NULL if none */
+	void (*cont_fire)(struct k_future_cont *, struct k_future *); /* dispatch */
+	struct k_future_cancel_link *cancel_links; /* list of cancel-forward links */
 /** @endcond */
 };
 
@@ -2998,12 +3029,14 @@ struct k_promise {
 /** @cond INTERNAL_HIDDEN */
 #define Z_FUTURE_INITIALIZER(obj) \
 	{ \
-	.state   = K_FUTURE_PENDING, \
-	.wait_q  = Z_WAIT_Q_INIT(&(obj).wait_q), \
-	.lock    = {}, \
-	.result  = {0, NULL}, \
-	.promise = NULL, \
-	.cont    = NULL, \
+	.state        = K_FUTURE_PENDING, \
+	.wait_q       = Z_WAIT_Q_INIT(&(obj).wait_q), \
+	.lock         = {}, \
+	.result       = {0, NULL}, \
+	.promise      = NULL, \
+	.cont         = NULL, \
+	.cont_fire    = NULL, \
+	.cancel_links = NULL, \
 	}
 /** @endcond */
 
@@ -3023,6 +3056,8 @@ struct k_promise {
 /**
  * @brief Initialize a future object
  *
+ * @note May not be called from ISR context.
+ *
  * @param f Address of the future to initialize.
  */
 void k_future_init(struct k_future *f);
@@ -3036,6 +3071,8 @@ void k_future_init(struct k_future *f);
  * back-pointer from @p f to @p p so that k_future_cancel() can safely
  * sever the link.
  *
+ * @note May not be called from ISR context.
+ *
  * @param p Address of the promise to initialize.
  * @param f Address of the future to bind.
  */
@@ -3048,6 +3085,8 @@ void k_promise_init(struct k_promise *p, struct k_future *f);
  * zero) or REJECTED (when @p result->status is negative) and wakes all
  * waiting threads.
  *
+ * @note May be safely called from ISR context.
+ *
  * @param p      Address of the promise.
  * @param result Pointer to the result to deliver.
  * @retval 0          Success.
@@ -3059,12 +3098,13 @@ int k_promise_settle(struct k_promise *p, const struct k_future_result *result);
 /**
  * @brief Resolve a future with a value (convenience wrapper)
  *
- * Equivalent to calling k_promise_settle() with a result of
- * @c {.status = 0, .value = value}.
+ * Equivalent to calling k_promise_settle() with K_FUTURE_RESULT_RESOLVE().
+ *
+ * @note May be safely called from ISR context.
  *
  * @param p     Address of the promise.
  * @param value Pointer to deliver to the consumer (may be NULL).
- * @retval 0         Success.
+ * @retval 0          Success.
  * @retval -ECANCELED Future was canceled by the consumer.
  * @retval -EALREADY  Future was already settled.
  */
@@ -3076,15 +3116,16 @@ static inline int k_promise_resolve(struct k_promise *p, void *value)
 /**
  * @brief Reject a future with an error code (convenience wrapper)
  *
- * Equivalent to calling k_promise_settle() with a result of
- * @c {.status = error, .value = NULL}.
+ * Equivalent to calling k_promise_settle() with K_FUTURE_RESULT_REJECT().
+ *
+ * @note May be safely called from ISR context.
  *
  * @param p     Address of the promise.
  * @param error Negative error code (e.g. -ENODEV). Must be < 0.
- * @retval 0         Success.
+ * @retval 0          Success.
  * @retval -ECANCELED Future was canceled by the consumer.
  * @retval -EALREADY  Future was already settled.
- * @retval -EINVAL   @p error was >= 0.
+ * @retval -EINVAL    @p error was >= 0.
  */
 int k_promise_reject(struct k_promise *p, int error);
 
@@ -3092,12 +3133,15 @@ int k_promise_reject(struct k_promise *p, int error);
  * @brief Test whether the underlying future has been canceled
  *
  * Convenience for producers to poll for consumer-initiated cancellation.
- * Safe to call at any point — reads only the promise's own @c canceled flag
- * and never dereferences the future pointer.
+ * Valid only when the promise was bound to a future via k_promise_init().
+ * Reads only the promise's own @c canceled flag and never dereferences the
+ * future pointer; safe to call even after the future has gone out of scope.
+ *
+ * @note May be safely called from ISR context.
  *
  * @param p Address of the promise.
- * @retval true  The future has been canceled.
- * @retval false The future has not been canceled.
+ * @retval true  The future was canceled via k_future_cancel().
+ * @retval false The future has not been canceled (may be pending or settled).
  */
 static inline bool k_promise_is_canceled(const struct k_promise *p)
 {
@@ -3112,6 +3156,8 @@ static inline bool k_promise_is_canceled(const struct k_promise *p)
  * k_future_is_resolved() / k_future_is_rejected() / k_future_is_canceled()
  * to determine the outcome, then k_future_get_result() to retrieve the value.
  *
+ * @note May not be called from ISR context.
+ *
  * @param f       Address of the future.
  * @param timeout Waiting period, or K_NO_WAIT / K_FOREVER.
  * @retval 0       Future has been settled (check state with k_future_is_*).
@@ -3123,6 +3169,7 @@ int k_future_wait(struct k_future *f, k_timeout_t timeout);
  * @brief Retrieve the full result of a settled future
  *
  * @note The caller must verify the future is settled before calling this.
+ * @note May be safely called from ISR context.
  *
  * @param f Address of the future.
  * @return A copy of the @ref k_future_result delivered by the producer.
@@ -3136,9 +3183,10 @@ static inline struct k_future_result k_future_get_result(const struct k_future *
  * @brief Retrieve the resolved value from a future
  *
  * @note The caller must verify the future is resolved before calling this.
+ * @note May be safely called from ISR context.
  *
  * @param f Address of the future.
- * @return The value pointer passed to k_promise_resolve() (or k_promise_settle()),
+ * @return The value pointer passed to k_promise_resolve() or k_promise_settle(),
  *         or NULL.
  */
 static inline void *k_future_get_value(const struct k_future *f)
@@ -3150,10 +3198,11 @@ static inline void *k_future_get_value(const struct k_future *f)
  * @brief Retrieve the error code from a rejected future
  *
  * @note The caller must verify the future is rejected before calling this.
+ * @note May be safely called from ISR context.
  *
  * @param f Address of the future.
  * @return Negative error code (result.status) passed to k_promise_reject()
- *         (or k_promise_settle()).
+ *         or k_promise_settle().
  */
 static inline int k_future_get_error(const struct k_future *f)
 {
@@ -3162,6 +3211,8 @@ static inline int k_future_get_error(const struct k_future *f)
 
 /**
  * @brief Test whether a future is still pending
+ *
+ * @note May be safely called from ISR context.
  *
  * @param f Address of the future.
  * @retval true  Future has not yet been settled.
@@ -3175,9 +3226,11 @@ static inline bool k_future_is_pending(const struct k_future *f)
 /**
  * @brief Test whether a future was resolved successfully
  *
+ * @note May be safely called from ISR context.
+ *
  * @param f Address of the future.
  * @retval true  Future was resolved.
- * @retval false Future is pending or was rejected.
+ * @retval false Future is pending or was rejected or canceled.
  */
 static inline bool k_future_is_resolved(const struct k_future *f)
 {
@@ -3186,6 +3239,8 @@ static inline bool k_future_is_resolved(const struct k_future *f)
 
 /**
  * @brief Test whether a future was rejected
+ *
+ * @note May be safely called from ISR context.
  *
  * @param f Address of the future.
  * @retval true  Future was rejected.
@@ -3198,6 +3253,8 @@ static inline bool k_future_is_rejected(const struct k_future *f)
 
 /**
  * @brief Test whether a future was canceled
+ *
+ * @note May be safely called from ISR context.
  *
  * @param f Address of the future.
  * @retval true  Future was canceled.
@@ -3212,19 +3269,22 @@ static inline bool k_future_is_canceled(const struct k_future *f)
  * @brief Cancel a pending future
  *
  * Transitions the future from PENDING to CANCELED and wakes all waiting
- * threads. No value is delivered to any registered output slot. No-op if the
- * future is already settled.
+ * threads.  Any registered cancel-forward links (see k_future_link_cancel())
+ * are fired after all locks are released.
  *
- * Before returning, severs the producer's @p p->future pointer so that any
- * subsequent k_promise_resolve() or k_promise_reject() call returns
- * -ECANCELED without dereferencing the future, which may have gone out of
- * scope after this call returns.
+ * If a promise was bound via k_promise_init(), severs the producer's forward
+ * pointer before returning so that any subsequent k_promise_settle() call
+ * returns -ECANCELED without touching the future, which may go out of scope
+ * immediately after this call returns.  Producers may poll
+ * k_promise_is_canceled() to detect cancellation early.
  *
- * Producers should poll k_promise_is_canceled() to detect cancellation and
- * stop work early.
+ * May be called without a bound promise (e.g. on a future that was
+ * initialized but never handed to a producer).
+ *
+ * @note May not be called from ISR context.
  *
  * @param f Address of the future.
- * @retval 0        Success.
+ * @retval 0         Success.
  * @retval -EALREADY Future was already settled.
  */
 int k_future_cancel(struct k_future *f);
@@ -3234,25 +3294,89 @@ int k_future_cancel(struct k_future *f);
  *
  * Attaches @p cont to @p f so that @p cont->cb is called (in the settling
  * thread's context, with no spinlocks held) when the future enters a state
- * matching @p cont->trigger.  If @p cont->cancel_propagate is non-NULL,
- * k_future_cancel() is called on that future whenever @p f is canceled,
- * regardless of @p cont->trigger.
+ * matching @p cont->trigger.
  *
  * Only one continuation may be registered per future at a time.
  *
  * If the future is already settled when this is called, the callback fires
  * synchronously before k_future_then() returns.
  *
+ * Cancel-forward behaviour is registered separately via k_future_link_cancel().
+ *
  * @note Do not combine with k_future_wait() on the same future instance.
- *       The continuation and blocking-wait are alternative consumption
- *       patterns; using both is undefined behaviour.
+ *       Continuation and blocking-wait are alternative consumption patterns;
+ *       using both is undefined behaviour.
+ * @note May not be called from ISR context if the future is still pending
+ *       (would need to pend).  Safe to call from ISR context only when the
+ *       future is already settled, provided the callback is also ISR-safe.
  *
  * @param f    Address of the future.
  * @param cont Caller-allocated continuation.  @p cont->cb, @p cont->ctx,
- *             @p cont->trigger, and optionally @p cont->cancel_propagate
- *             must be set before calling.
+ *             and @p cont->trigger must be initialised before calling.
  */
 void k_future_then(struct k_future *f, struct k_future_cont *cont);
+
+/**
+ * @brief Register a rejection handler on a future.
+ *
+ * Convenience wrapper that sets @p cont->trigger to @ref K_FUTURE_ON_REJECTED
+ * and calls k_future_then().  Use when the continuation should only fire on
+ * failure, mirroring the @c .catch() pattern from JavaScript Promises.
+ *
+ * @note May not be called from ISR context if the future is still pending.
+ *
+ * @param f    Address of the future.
+ * @param cont Caller-allocated continuation.  @p cont->cb and @p cont->ctx
+ *             must be initialised; @p cont->trigger is overwritten.
+ */
+static inline void k_future_catch(struct k_future *f, struct k_future_cont *cont)
+{
+	cont->trigger = K_FUTURE_ON_REJECTED;
+	k_future_then(f, cont);
+}
+
+/**
+ * @brief Register a finalizer on a future.
+ *
+ * Convenience wrapper that sets @p cont->trigger to @ref K_FUTURE_ON_ANY
+ * and calls k_future_then().  The callback fires regardless of whether the
+ * future is resolved, rejected, or canceled, mirroring @c .finally() from
+ * JavaScript Promises.
+ *
+ * @note May not be called from ISR context if the future is still pending.
+ *
+ * @param f    Address of the future.
+ * @param cont Caller-allocated continuation.  @p cont->cb and @p cont->ctx
+ *             must be initialised; @p cont->trigger is overwritten.
+ */
+static inline void k_future_finally(struct k_future *f, struct k_future_cont *cont)
+{
+	cont->trigger = K_FUTURE_ON_ANY;
+	k_future_then(f, cont);
+}
+
+/**
+ * @brief Register a cancel-forward link between two futures.
+ *
+ * When @p src is canceled, k_future_cancel() is automatically called on
+ * @p dst.  Multiple links may be chained by registering several nodes on
+ * the same @p src.
+ *
+ * If @p src is already canceled when this is called, k_future_cancel() is
+ * called on @p dst immediately, before this function returns.
+ *
+ * The caller owns the @p link node and must keep it valid until @p src is
+ * settled.  The link is separate from any continuation registered via
+ * k_future_then() — both may be used independently on the same future.
+ *
+ * @note May not be called from ISR context.
+ *
+ * @param src  Future whose cancellation triggers the forward.
+ * @param dst  Future to cancel when @p src is canceled.
+ * @param link Caller-allocated link node.
+ */
+void k_future_link_cancel(struct k_future *src, struct k_future *dst,
+			   struct k_future_cancel_link *link);
 
 /** @} */
 #endif /* CONFIG_FUTURES */
