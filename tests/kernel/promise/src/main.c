@@ -106,8 +106,8 @@ ZTEST(promise, test_resolve_basic)
 	struct k_promise p;
 	void *val = (void *)0xdeadbeef;
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 
 	zassert_true(k_future_is_pending(&f));
 
@@ -125,8 +125,8 @@ ZTEST(promise, test_reject_basic)
 	struct k_future f;
 	struct k_promise p;
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 
 	zassert_equal(k_promise_reject(&p, -ENODEV), 0);
 
@@ -140,8 +140,8 @@ ZTEST(promise, test_cancel_basic)
 	struct k_future f;
 	struct k_promise p;
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 
 	zassert_equal(k_future_cancel(&f), 0);
 
@@ -154,8 +154,8 @@ ZTEST(promise, test_resolve_twice)
 	struct k_future f;
 	struct k_promise p;
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 
 	zassert_equal(k_promise_resolve(&p, NULL), 0);
 	zassert_equal(k_promise_resolve(&p, NULL), -EALREADY);
@@ -166,8 +166,8 @@ ZTEST(promise, test_reject_twice)
 	struct k_future f;
 	struct k_promise p;
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 
 	zassert_equal(k_promise_reject(&p, -EIO), 0);
 	zassert_equal(k_promise_reject(&p, -EIO), -EALREADY);
@@ -178,8 +178,8 @@ ZTEST(promise, test_cancel_twice)
 	struct k_future f;
 	struct k_promise p;
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 
 	zassert_equal(k_future_cancel(&f), 0);
 	zassert_equal(k_future_cancel(&f), -EALREADY);
@@ -190,8 +190,8 @@ ZTEST(promise, test_cancel_then_resolve)
 	struct k_future f;
 	struct k_promise p;
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 
 	zassert_equal(k_future_cancel(&f), 0);
 	zassert_equal(k_promise_resolve(&p, NULL), -ECANCELED);
@@ -205,8 +205,8 @@ ZTEST(promise, test_cancel_then_reject)
 	struct k_future f;
 	struct k_promise p;
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 
 	zassert_equal(k_future_cancel(&f), 0);
 	zassert_equal(k_promise_reject(&p, -EIO), -ECANCELED);
@@ -219,8 +219,8 @@ ZTEST(promise, test_reject_nonnegative_error)
 	struct k_future f;
 	struct k_promise p;
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 
 	/* error must be strictly negative */
 	zassert_equal(k_promise_reject(&p, 0), -EINVAL);
@@ -230,50 +230,86 @@ ZTEST(promise, test_reject_nonnegative_error)
 	zassert_true(k_future_is_pending(&f));
 }
 
-ZTEST(promise, test_out_slot_written_on_resolve)
-{
-	struct k_future f;
-	struct k_promise p;
-	void *out = NULL;
-	void *val = (void *)0x1234;
-
-	k_future_init(&f, &out);
-	k_future_get_promise(&f, &p);
-
-	k_promise_resolve(&p, val);
-
-	zassert_equal(out, val);
-}
-
-ZTEST(promise, test_out_slot_not_written_on_reject)
-{
-	struct k_future f;
-	struct k_promise p;
-	void *sentinel = (void *)0xABCD;
-	void *out = sentinel;
-
-	k_future_init(&f, &out);
-	k_future_get_promise(&f, &p);
-
-	k_promise_reject(&p, -EIO);
-
-	/* Slot must be untouched on rejection. */
-	zassert_equal(out, sentinel);
-}
-
 ZTEST(promise, test_promise_is_canceled)
 {
 	struct k_future f;
 	struct k_promise p;
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 
 	zassert_false(k_promise_is_canceled(&p));
 
 	k_future_cancel(&f);
 
 	zassert_true(k_promise_is_canceled(&p));
+}
+
+/* =========================================================================
+ * k_promise_settle tests
+ * ========================================================================= */
+
+ZTEST(promise, test_settle_resolves)
+{
+	struct k_future f;
+	struct k_promise p;
+	void *val = (void *)0x1234;
+	struct k_future_result res = {.status = 0, .value = val};
+
+	k_future_init(&f);
+	k_promise_init(&p, &f);
+
+	zassert_equal(k_promise_settle(&p, &res), 0);
+
+	zassert_true(k_future_is_resolved(&f));
+	zassert_equal(k_future_get_value(&f), val);
+}
+
+ZTEST(promise, test_settle_rejects)
+{
+	struct k_future f;
+	struct k_promise p;
+	struct k_future_result res = {.status = -ENODEV};
+
+	k_future_init(&f);
+	k_promise_init(&p, &f);
+
+	zassert_equal(k_promise_settle(&p, &res), 0);
+
+	zassert_true(k_future_is_rejected(&f));
+	zassert_equal(k_future_get_error(&f), -ENODEV);
+}
+
+ZTEST(promise, test_get_result)
+{
+	struct k_future f;
+	struct k_promise p;
+	void *val = (void *)0xABCD;
+	struct k_future_result res = {.status = 0, .value = val};
+
+	k_future_init(&f);
+	k_promise_init(&p, &f);
+	k_promise_settle(&p, &res);
+
+	struct k_future_result got = k_future_get_result(&f);
+
+	zassert_equal(got.status, 0);
+	zassert_equal(got.value, val);
+}
+
+ZTEST(promise, test_cancel_without_promise)
+{
+	struct k_future f;
+
+	/* Never bind a promise — cancel must still work. */
+	k_future_init(&f);
+
+	zassert_true(k_future_is_pending(&f));
+	zassert_equal(k_future_cancel(&f), 0);
+	zassert_true(k_future_is_canceled(&f));
+
+	/* Second cancel must return -EALREADY. */
+	zassert_equal(k_future_cancel(&f), -EALREADY);
 }
 
 /* =========================================================================
@@ -289,7 +325,7 @@ ZTEST(promise, test_static_define)
 	/* Z_FUTURE_INITIALIZER sets state to PENDING. */
 	zassert_true(k_future_is_pending(&static_future));
 
-	k_future_get_promise(&static_future, &p);
+	k_promise_init(&p, &static_future);
 	zassert_equal(k_promise_resolve(&p, (void *)0xCAFE), 0);
 	zassert_true(k_future_is_resolved(&static_future));
 	zassert_equal(k_future_get_value(&static_future), (void *)0xCAFE);
@@ -304,8 +340,8 @@ ZTEST(promise, test_wait_already_resolved)
 	struct k_future f;
 	struct k_promise p;
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 	k_promise_resolve(&p, (void *)0xAA);
 
 	/* Already settled: must return immediately even with K_NO_WAIT. */
@@ -318,8 +354,8 @@ ZTEST(promise, test_wait_already_canceled)
 	struct k_future f;
 	struct k_promise p;
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 	k_future_cancel(&f);
 
 	zassert_equal(k_future_wait(&f, K_NO_WAIT), 0);
@@ -331,8 +367,8 @@ ZTEST(promise, test_wait_nowait_pending)
 	struct k_future f;
 	struct k_promise p;
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 
 	/* Nothing settles it: K_NO_WAIT must return -EAGAIN. */
 	zassert_equal(k_future_wait(&f, K_NO_WAIT), -EAGAIN);
@@ -345,8 +381,8 @@ ZTEST(promise, test_wait_thread_resolves)
 	struct k_promise p;
 	struct helper_arg arg = { .f = &f, .p = &p, .value = (void *)0xBEEF };
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 
 	k_thread_create(&helper_thread, helper_stack, STACK_SIZE,
 			thread_resolve, &arg, NULL, NULL,
@@ -365,8 +401,8 @@ ZTEST(promise, test_wait_thread_rejects)
 	struct k_promise p;
 	struct helper_arg arg = { .f = &f, .p = &p, .error = -ENODEV };
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 
 	k_thread_create(&helper_thread, helper_stack, STACK_SIZE,
 			thread_reject, &arg, NULL, NULL,
@@ -385,8 +421,8 @@ ZTEST(promise, test_wait_thread_cancels)
 	struct k_promise p;
 	struct helper_arg arg = { .f = &f, .p = &p };
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 
 	k_thread_create(&helper_thread, helper_stack, STACK_SIZE,
 			thread_cancel, &arg, NULL, NULL,
@@ -403,8 +439,8 @@ ZTEST(promise, test_wait_timeout)
 	struct k_future f;
 	struct k_promise p;
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 
 	/* Nobody settles the future — wait must time out. */
 	zassert_equal(k_future_wait(&f, K_MSEC(20)), -EAGAIN);
@@ -427,8 +463,8 @@ ZTEST(promise, test_cont_fires_on_resolve)
 	};
 
 	atomic_set(&count, 0);
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 	k_future_then(&f, &cont);
 
 	k_promise_resolve(&p, NULL);
@@ -448,8 +484,8 @@ ZTEST(promise, test_cont_fires_on_reject)
 	};
 
 	atomic_set(&count, 0);
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 	k_future_then(&f, &cont);
 
 	k_promise_reject(&p, -ENODEV);
@@ -469,8 +505,8 @@ ZTEST(promise, test_cont_fires_on_cancel)
 	};
 
 	atomic_set(&count, 0);
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 	k_future_then(&f, &cont);
 
 	k_future_cancel(&f);
@@ -493,12 +529,12 @@ ZTEST(promise, test_cont_settled_fires_on_resolve_and_reject)
 	atomic_set(&c1, 0);
 	atomic_set(&c2, 0);
 
-	k_future_init(&f1, NULL);
-	k_future_get_promise(&f1, &p1);
+	k_future_init(&f1);
+	k_promise_init(&p1, &f1);
 	k_future_then(&f1, &cont1);
 
-	k_future_init(&f2, NULL);
-	k_future_get_promise(&f2, &p2);
+	k_future_init(&f2);
+	k_promise_init(&p2, &f2);
 	k_future_then(&f2, &cont2);
 
 	k_promise_resolve(&p1, NULL);
@@ -521,8 +557,8 @@ ZTEST(promise, test_cont_trigger_filter)
 	};
 
 	atomic_set(&count, 0);
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 	k_future_then(&f, &cont);
 
 	k_promise_reject(&p, -EIO);
@@ -542,8 +578,8 @@ ZTEST(promise, test_cont_receives_correct_future)
 		.trigger = K_FUTURE_ON_ANY,
 	};
 
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 	k_future_then(&f, &cont);
 
 	k_promise_resolve(&p, NULL);
@@ -563,8 +599,8 @@ ZTEST(promise, test_cont_fires_immediately_when_already_resolved)
 	};
 
 	atomic_set(&count, 0);
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 
 	k_promise_resolve(&p, NULL);
 
@@ -586,8 +622,8 @@ ZTEST(promise, test_cont_fires_immediately_when_already_canceled)
 	};
 
 	atomic_set(&count, 0);
-	k_future_init(&f, NULL);
-	k_future_get_promise(&f, &p);
+	k_future_init(&f);
+	k_promise_init(&p, &f);
 	k_future_cancel(&f);
 
 	k_future_then(&f, &cont);
@@ -608,10 +644,10 @@ ZTEST(promise, test_cancel_propagate)
 		.cancel_propagate = &fB,
 	};
 
-	k_future_init(&fA, NULL);
-	k_future_get_promise(&fA, &pA);
-	k_future_init(&fB, NULL);
-	k_future_get_promise(&fB, &pB);
+	k_future_init(&fA);
+	k_promise_init(&pA, &fA);
+	k_future_init(&fB);
+	k_promise_init(&pB, &fB);
 
 	k_future_then(&fA, &cont);
 
@@ -631,10 +667,10 @@ ZTEST(promise, test_cancel_propagate_not_triggered_on_resolve)
 		.cancel_propagate = &fB,
 	};
 
-	k_future_init(&fA, NULL);
-	k_future_get_promise(&fA, &pA);
-	k_future_init(&fB, NULL);
-	k_future_get_promise(&fB, &pB);
+	k_future_init(&fA);
+	k_promise_init(&pA, &fA);
+	k_future_init(&fB);
+	k_promise_init(&pB, &fB);
 
 	k_future_then(&fA, &cont);
 
@@ -651,12 +687,12 @@ ZTEST(promise, test_cancel_propagate_chain)
 	struct k_future_cont contAB = { .cancel_propagate = &fB };
 	struct k_future_cont contBC = { .cancel_propagate = &fC };
 
-	k_future_init(&fA, NULL);
-	k_future_get_promise(&fA, &pA);
-	k_future_init(&fB, NULL);
-	k_future_get_promise(&fB, &pB);
-	k_future_init(&fC, NULL);
-	k_future_get_promise(&fC, &pC);
+	k_future_init(&fA);
+	k_promise_init(&pA, &fA);
+	k_future_init(&fB);
+	k_promise_init(&pB, &fB);
+	k_future_init(&fC);
+	k_promise_init(&pC, &fC);
 
 	k_future_then(&fA, &contAB);
 	k_future_then(&fB, &contBC);
@@ -684,10 +720,10 @@ ZTEST(promise, test_chain_resolve)
 		.trigger = K_FUTURE_ON_RESOLVED,
 	};
 
-	k_future_init(&fA, NULL);
-	k_future_get_promise(&fA, &pA);
-	k_future_init(&fB, NULL);
-	k_future_get_promise(&fB, &pB);
+	k_future_init(&fA);
+	k_promise_init(&pA, &fA);
+	k_future_init(&fB);
+	k_promise_init(&pB, &fB);
 
 	k_future_then(&fA, &cont);
 
@@ -708,10 +744,10 @@ ZTEST(promise, test_catch_reject)
 		.trigger = K_FUTURE_ON_REJECTED,
 	};
 
-	k_future_init(&fA, NULL);
-	k_future_get_promise(&fA, &pA);
-	k_future_init(&fB, NULL);
-	k_future_get_promise(&fB, &pB);
+	k_future_init(&fA);
+	k_promise_init(&pA, &fA);
+	k_future_init(&fB);
+	k_promise_init(&pB, &fB);
 
 	k_future_then(&fA, &cont);
 
@@ -733,10 +769,10 @@ ZTEST(promise, test_chain_reject_not_caught)
 		.trigger = K_FUTURE_ON_RESOLVED,
 	};
 
-	k_future_init(&fA, NULL);
-	k_future_get_promise(&fA, &pA);
-	k_future_init(&fB, NULL);
-	k_future_get_promise(&fB, &pB);
+	k_future_init(&fA);
+	k_promise_init(&pA, &fA);
+	k_future_init(&fB);
+	k_promise_init(&pB, &fB);
 
 	k_future_then(&fA, &cont);
 

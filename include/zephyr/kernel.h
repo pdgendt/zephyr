@@ -89,6 +89,7 @@ struct k_futex;
 struct k_event;
 struct k_future;
 struct k_future_cont;
+struct k_future_result;
 struct k_promise;
 
 enum execution_context_types {
@@ -2904,12 +2905,26 @@ static inline uint32_t k_event_test(struct k_event *event, uint32_t events_mask)
 /** @} */
 
 /**
+ * @brief Settled result of a future.
+ *
+ * Returned by k_future_get_result() and accepted by k_promise_settle().
+ * If @p status is zero the operation succeeded and @p value carries the
+ * result pointer; if @p status is negative it is a standard errno value
+ * and @p value is undefined.
+ */
+struct k_future_result {
+	/** 0 on success; negative errno on failure. */
+	int    status;
+	/** Result pointer; valid when @p status is zero. */
+	void  *value;
+};
+
+/**
  * @brief Callback type for a future continuation.
  *
  * Called directly in the settling thread's context (i.e. the thread that
- * called k_promise_resolve(), k_promise_reject(), or k_future_cancel()) with
- * no spinlocks held.  The callback may itself call k_promise_resolve() or
- * k_promise_reject() on any other future.
+ * called k_promise_settle(), or k_future_cancel()) with no spinlocks held.
+ * The callback may itself call k_promise_settle() on any other future.
  *
  * @param f   The future that was just settled.
  * @param ctx User-supplied context pointer from struct k_future_cont.
@@ -2955,10 +2970,8 @@ struct k_future {
 	atomic_t              state;
 	_wait_q_t             wait_q;
 	struct k_spinlock     lock;
-	int                   error;
-	void                 *value;   /* resolved value pointer */
-	void                **out;     /* consumer output slot, set at init */
-	struct k_promise     *promise; /* back-pointer set by k_future_get_promise */
+	struct k_future_result result; /* set by k_promise_settle */
+	struct k_promise     *promise; /* back-pointer set by k_promise_init */
 	struct k_future_cont *cont;    /* single continuation, NULL if none */
 /** @endcond */
 };
@@ -2988,9 +3001,7 @@ struct k_promise {
 	.state   = K_FUTURE_PENDING, \
 	.wait_q  = Z_WAIT_Q_INIT(&(obj).wait_q), \
 	.lock    = {}, \
-	.error   = 0, \
-	.value   = NULL, \
-	.out     = NULL, \
+	.result  = {0, NULL}, \
 	.promise = NULL, \
 	.cont    = NULL, \
 	}
@@ -3012,58 +3023,67 @@ struct k_promise {
 /**
  * @brief Initialize a future object
  *
- * @param f   Address of the future to initialize.
- * @param out Pointer to a @c void* variable that will receive the resolved
- *            value when the future is settled, or NULL if the caller will
- *            retrieve the value via k_future_get_value().
+ * @param f Address of the future to initialize.
  */
-void k_future_init(struct k_future *f, void **out);
+void k_future_init(struct k_future *f);
 
 /**
- * @brief Obtain a promise handle for the given future
+ * @brief Initialize a promise and bind it to a future
  *
- * Links @p p to @p f so that the producer can call k_promise_resolve() or
- * k_promise_reject() to settle the future. Also stores a back-pointer from
- * @p f to @p p so that k_future_cancel() can safely sever the link.
+ * Prepares the promise @p p for use and links it to @p f so that the
+ * producer can call k_promise_settle() (or the k_promise_resolve() /
+ * k_promise_reject() helpers) to settle the future.  Also stores a
+ * back-pointer from @p f to @p p so that k_future_cancel() can safely
+ * sever the link.
  *
- * @param f Address of the future.
  * @param p Address of the promise to initialize.
+ * @param f Address of the future to bind.
  */
-static inline void k_future_get_promise(struct k_future *f, struct k_promise *p)
-{
-	p->lock = (struct k_spinlock){};
-	p->future = f;
-	atomic_set(&p->canceled, 0);
-	f->promise = p;
-}
+void k_promise_init(struct k_promise *p, struct k_future *f);
 
 /**
- * @brief Resolve a future with a value
+ * @brief Settle a future with a result
  *
- * Transitions the future from PENDING to RESOLVED and wakes all waiting
- * threads. If a consumer registered an output slot via k_future_init(), the
- * pointer @p value is written into that slot. No-op if the future is already
- * resolved or rejected.
+ * Transitions the future from PENDING to RESOLVED (when @p result->status is
+ * zero) or REJECTED (when @p result->status is negative) and wakes all
+ * waiting threads.
+ *
+ * @param p      Address of the promise.
+ * @param result Pointer to the result to deliver.
+ * @retval 0          Success.
+ * @retval -ECANCELED Future was canceled by the consumer.
+ * @retval -EALREADY  Future was already settled.
+ */
+int k_promise_settle(struct k_promise *p, const struct k_future_result *result);
+
+/**
+ * @brief Resolve a future with a value (convenience wrapper)
+ *
+ * Equivalent to calling k_promise_settle() with a result of
+ * @c {.status = 0, .value = value}.
  *
  * @param p     Address of the promise.
  * @param value Pointer to deliver to the consumer (may be NULL).
  * @retval 0         Success.
  * @retval -ECANCELED Future was canceled by the consumer.
- * @retval -EALREADY  Future was already resolved or rejected.
+ * @retval -EALREADY  Future was already settled.
  */
-int k_promise_resolve(struct k_promise *p, void *value);
+static inline int k_promise_resolve(struct k_promise *p, void *value)
+{
+	return k_promise_settle(p, &(struct k_future_result){.status = 0, .value = value});
+}
 
 /**
- * @brief Reject a future with an error code
+ * @brief Reject a future with an error code (convenience wrapper)
  *
- * Transitions the future from PENDING to REJECTED and wakes all waiting
- * threads. No-op if the future is already resolved or rejected.
+ * Equivalent to calling k_promise_settle() with a result of
+ * @c {.status = error, .value = NULL}.
  *
  * @param p     Address of the promise.
  * @param error Negative error code (e.g. -ENODEV). Must be < 0.
  * @retval 0         Success.
  * @retval -ECANCELED Future was canceled by the consumer.
- * @retval -EALREADY  Future was already resolved or rejected.
+ * @retval -EALREADY  Future was already settled.
  * @retval -EINVAL   @p error was >= 0.
  */
 int k_promise_reject(struct k_promise *p, int error);
@@ -3088,9 +3108,9 @@ static inline bool k_promise_is_canceled(const struct k_promise *p)
  * @brief Wait for a future to be settled
  *
  * Blocks the calling thread until the future is resolved, rejected, or
- * canceled, or until @p timeout elapses. If an output slot was registered via
- * k_future_init() and the future is resolved, the resolved value is written
- * into that slot by the settling thread.
+ * canceled, or until @p timeout elapses.  After this returns 0 use
+ * k_future_is_resolved() / k_future_is_rejected() / k_future_is_canceled()
+ * to determine the outcome, then k_future_get_result() to retrieve the value.
  *
  * @param f       Address of the future.
  * @param timeout Waiting period, or K_NO_WAIT / K_FOREVER.
@@ -3100,16 +3120,30 @@ static inline bool k_promise_is_canceled(const struct k_promise *p)
 int k_future_wait(struct k_future *f, k_timeout_t timeout);
 
 /**
+ * @brief Retrieve the full result of a settled future
+ *
+ * @note The caller must verify the future is settled before calling this.
+ *
+ * @param f Address of the future.
+ * @return A copy of the @ref k_future_result delivered by the producer.
+ */
+static inline struct k_future_result k_future_get_result(const struct k_future *f)
+{
+	return f->result;
+}
+
+/**
  * @brief Retrieve the resolved value from a future
  *
  * @note The caller must verify the future is resolved before calling this.
  *
  * @param f Address of the future.
- * @return The value pointer passed to k_promise_resolve(), or NULL.
+ * @return The value pointer passed to k_promise_resolve() (or k_promise_settle()),
+ *         or NULL.
  */
 static inline void *k_future_get_value(const struct k_future *f)
 {
-	return f->value;
+	return f->result.value;
 }
 
 /**
@@ -3118,11 +3152,12 @@ static inline void *k_future_get_value(const struct k_future *f)
  * @note The caller must verify the future is rejected before calling this.
  *
  * @param f Address of the future.
- * @return Negative error code passed to k_promise_reject().
+ * @return Negative error code (result.status) passed to k_promise_reject()
+ *         (or k_promise_settle()).
  */
 static inline int k_future_get_error(const struct k_future *f)
 {
-	return f->error;
+	return f->result.status;
 }
 
 /**

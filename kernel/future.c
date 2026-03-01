@@ -11,20 +11,29 @@
 #include <ksched.h>
 #include <wait_q.h>
 
-void k_future_init(struct k_future *f, void **out)
+void k_future_init(struct k_future *f)
 {
 	__ASSERT_NO_MSG(!arch_is_in_isr());
 
 	atomic_set(&f->state, K_FUTURE_PENDING);
 	z_waitq_init(&f->wait_q);
 	f->lock = (struct k_spinlock){};
-	f->error = 0;
-	f->value = NULL;
-	f->out = out;
+	f->result = (struct k_future_result){0, NULL};
 	f->promise = NULL;
 	f->cont = NULL;
 
 	k_object_init(f);
+}
+
+void k_promise_init(struct k_promise *p, struct k_future *f)
+{
+	__ASSERT_NO_MSG(!arch_is_in_isr());
+	__ASSERT_NO_MSG(f != NULL);
+
+	p->lock = (struct k_spinlock){};
+	p->future = f;
+	atomic_set(&p->canceled, 0);
+	f->promise = p;
 }
 
 /* --- continuation helpers ------------------------------------------------ */
@@ -85,19 +94,20 @@ void k_future_then(struct k_future *f, struct k_future_cont *cont)
 /* --- settle helpers ------------------------------------------------------- */
 
 /*
- * Both resolve and reject acquire p->lock before f->lock (lock ordering).
- * cancel acquires p->lock then f->lock in the same order, preventing deadlock.
+ * All three settle paths (settle, reject, cancel) acquire p->lock before
+ * f->lock when a promise is linked (lock ordering).  This prevents deadlock
+ * between concurrent resolve and cancel.
  *
  * p->future is NULLed under p->lock by all three paths so the producer never
  * dereferences a future that may have gone out of scope.
  *
  * The continuation (if any) is extracted under f->lock so it fires exactly
  * once, then called after all locks are released so the callback can itself
- * call k_promise_resolve() / k_promise_reject() / k_future_cancel() on any
- * other future without re-entering any held lock.
+ * call k_promise_settle() / k_future_cancel() on any other future without
+ * re-entering any held lock.
  */
 
-int k_promise_resolve(struct k_promise *p, void *value)
+int k_promise_settle(struct k_promise *p, const struct k_future_result *result)
 {
 	k_spinlock_key_t pk = k_spin_lock(&p->lock);
 	struct k_future *f = p->future;
@@ -112,7 +122,7 @@ int k_promise_resolve(struct k_promise *p, void *value)
 	/*
 	 * We hold p->lock, so k_future_cancel() cannot be running concurrently
 	 * (it acquires p->lock first).  The state must still be PENDING, but
-	 * check for a double-resolve anyway.
+	 * guard against double-settle.
 	 */
 	if (atomic_get(&f->state) != K_FUTURE_PENDING) {
 		k_spin_unlock(&f->lock, fk);
@@ -120,14 +130,12 @@ int k_promise_resolve(struct k_promise *p, void *value)
 		return -EALREADY;
 	}
 
-	f->value = value;
-	atomic_set(&f->state, K_FUTURE_RESOLVED);
-	if (f->out != NULL) {
-		*f->out = value;
-	}
+	f->result = *result;
+	atomic_set(&f->state, result->status < 0 ? K_FUTURE_REJECTED : K_FUTURE_RESOLVED);
 	p->future = NULL; /* sever link */
 
 	struct k_future_cont *cont = f->cont;
+
 	f->cont = NULL;
 
 	struct k_thread *thread;
@@ -153,57 +161,54 @@ int k_promise_reject(struct k_promise *p, int error)
 		return -EINVAL;
 	}
 
-	k_spinlock_key_t pk = k_spin_lock(&p->lock);
-	struct k_future *f = p->future;
-
-	if (f == NULL) {
-		k_spin_unlock(&p->lock, pk);
-		return atomic_get(&p->canceled) ? -ECANCELED : -EALREADY;
-	}
-
-	k_spinlock_key_t fk = k_spin_lock(&f->lock);
-
-	if (atomic_get(&f->state) != K_FUTURE_PENDING) {
-		k_spin_unlock(&f->lock, fk);
-		k_spin_unlock(&p->lock, pk);
-		return -EALREADY;
-	}
-
-	f->error = error;
-	atomic_set(&f->state, K_FUTURE_REJECTED);
-	p->future = NULL; /* sever link */
-
-	struct k_future_cont *cont = f->cont;
-	f->cont = NULL;
-
-	struct k_thread *thread;
-
-	while ((thread = z_unpend_first_thread(&f->wait_q)) != NULL) {
-		arch_thread_return_value_set(thread, 0);
-		z_ready_thread(thread);
-	}
-
-	k_spin_unlock(&f->lock, fk);
-	z_reschedule(&p->lock, pk);
-
-	if (cont != NULL) {
-		cont->_fire(cont, f);
-	}
-
-	return 0;
+	return k_promise_settle(p, &(struct k_future_result){.status = error});
 }
 
 int k_future_cancel(struct k_future *f)
 {
 	__ASSERT_NO_MSG(!arch_is_in_isr());
-	__ASSERT_NO_MSG(f->promise != NULL);
 
 	struct k_promise *p = f->promise;
 
+	if (p == NULL) {
+		/*
+		 * No promise linked — future was either never bound or has
+		 * already been settled and the link severed.  Cancel directly
+		 * under f->lock alone (no lock-ordering concern).
+		 */
+		k_spinlock_key_t fk = k_spin_lock(&f->lock);
+
+		if (atomic_get(&f->state) != K_FUTURE_PENDING) {
+			k_spin_unlock(&f->lock, fk);
+			return -EALREADY;
+		}
+
+		atomic_set(&f->state, K_FUTURE_CANCELED);
+
+		struct k_future_cont *cont = f->cont;
+
+		f->cont = NULL;
+
+		struct k_thread *thread;
+
+		while ((thread = z_unpend_first_thread(&f->wait_q)) != NULL) {
+			arch_thread_return_value_set(thread, 0);
+			z_ready_thread(thread);
+		}
+
+		z_reschedule(&f->lock, fk);
+
+		if (cont != NULL) {
+			cont->_fire(cont, f);
+		}
+
+		return 0;
+	}
+
 	/*
-	 * Acquire p->lock first, then f->lock — same order as resolve/reject,
-	 * preventing deadlock.  Nulling p->future under p->lock guarantees that
-	 * once this function returns, any concurrent or future resolve/reject
+	 * Acquire p->lock first, then f->lock — same order as settle,
+	 * preventing deadlock.  Nulling p->future under p->lock guarantees
+	 * that once this function returns, any concurrent or future settle
 	 * call will see NULL and return -ECANCELED without touching f.
 	 */
 	k_spinlock_key_t pk = k_spin_lock(&p->lock);
@@ -220,6 +225,7 @@ int k_future_cancel(struct k_future *f)
 	p->future = NULL; /* sever link — f may go out of scope after we return */
 
 	struct k_future_cont *cont = f->cont;
+
 	f->cont = NULL;
 
 	struct k_thread *thread;
