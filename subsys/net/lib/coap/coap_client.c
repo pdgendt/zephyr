@@ -142,15 +142,6 @@ static bool has_ongoing_exchange(const struct coap_client *client)
 	return false;
 }
 
-static bool has_timeout_expired(const struct coap_client *client)
-{
-	for (int i = 0; i < CONFIG_COAP_CLIENT_MAX_REQUESTS; i++) {
-		if (timeout_expired(&client->requests[i])) {
-			return true;
-		}
-	}
-	return false;
-}
 
 static struct coap_client_internal_request *get_free_request(struct coap_client *client)
 {
@@ -685,17 +676,12 @@ static int handle_poll(void)
 	struct zsock_pollfd fds[CONFIG_COAP_CLIENT_MAX_INSTANCES] = {0};
 	int nfds = 0;
 
-	/* Use periodic timeouts */
 	for (int i = 0; i < num_clients; i++) {
-		short events = (has_ongoing_exchange(clients[i]) ? ZSOCK_POLLIN : 0) |
-			       (has_timeout_expired(clients[i]) ? ZSOCK_POLLOUT : 0);
-
-		if (events == 0) {
-			/* Skip this socket */
+		if (!has_ongoing_exchange(clients[i])) {
 			continue;
 		}
 		fds[nfds].fd = clients[i]->fd;
-		fds[nfds].events = events;
+		fds[nfds].events = ZSOCK_POLLIN;
 		fds[nfds].revents = 0;
 		nfds++;
 	}
@@ -706,8 +692,6 @@ static int handle_poll(void)
 		ret = -errno;
 		LOG_ERR("Error in poll:%d", ret);
 		return ret;
-	} else if (ret == 0) {
-		return 0;
 	}
 
 	for (int i = 0; i < nfds; i++) {
@@ -720,9 +704,6 @@ static int handle_poll(void)
 			continue;
 		}
 
-		if (fds[i].revents & ZSOCK_POLLOUT) {
-			coap_client_resend_handler(client);
-		}
 		if (fds[i].revents & ZSOCK_POLLIN) {
 			struct coap_packet response;
 			bool response_truncated = false;
@@ -759,6 +740,11 @@ static int handle_poll(void)
 			LOG_ERR("Error in poll: POLLNVAL - fd %d not open", fds[i].fd);
 			cancel_requests_with(client, -EIO);
 		}
+	}
+
+	/* Handle timeouts independently of poll events */
+	for (int i = 0; i < num_clients; i++) {
+		coap_client_resend_handler(clients[i]);
 	}
 
 	return 0;
