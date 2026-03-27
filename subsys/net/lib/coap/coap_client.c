@@ -669,6 +669,39 @@ static struct coap_client *get_client(int sock)
 	return NULL;
 }
 
+static int get_next_timeout(void)
+{
+	int64_t now = k_uptime_get();
+	int64_t min_timeout = COAP_PERIODIC_TIMEOUT;
+
+	for (int i = 0; i < num_clients; i++) {
+		for (int j = 0; j < CONFIG_COAP_CLIENT_MAX_REQUESTS; j++) {
+			struct coap_client_internal_request *req = &clients[i]->requests[j];
+
+			if (!req->request_ongoing || req->pending.timeout == 0) {
+				continue;
+			}
+
+#if defined(CONFIG_COAP_CLIENT_MULTICAST)
+			if (req->is_mcast) {
+				continue;
+			}
+#endif
+
+			int64_t remaining = (req->pending.t0 + req->pending.timeout) - now;
+
+			if (remaining <= 0) {
+				/* Fire immediately */
+				return 0;
+			}
+
+			min_timeout = MIN(min_timeout, remaining);
+		}
+	}
+
+	return (int)min_timeout;
+}
+
 static int handle_poll(void)
 {
 	int ret = 0;
@@ -686,7 +719,7 @@ static int handle_poll(void)
 		nfds++;
 	}
 
-	ret = zsock_poll(fds, nfds, COAP_PERIODIC_TIMEOUT);
+	ret = zsock_poll(fds, nfds, get_next_timeout());
 
 	if (ret < 0) {
 		ret = -errno;
