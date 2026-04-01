@@ -2631,6 +2631,43 @@ class PythonCompatCheck(ComplianceTest):
             )
 
 
+class SockaddrStorage(ComplianceTest):
+    """
+    Check that struct sockaddr / struct net_sockaddr are not declared as
+    variables. These types are meant to be used as an interface for passing
+    to functions. For storage, use struct sockaddr_storage /
+    struct net_sockaddr_storage instead.
+    """
+
+    name = "SockaddrStorage"
+    doc = "Use struct sockaddr_storage / struct net_sockaddr_storage for variable declarations."
+
+    # Matches "struct sockaddr" or "struct net_sockaddr" used as a variable
+    # declaration, but not "_storage" or other suffixed variants (e.g.
+    # sockaddr_in, sockaddr_in6, net_sockaddr_ptr).
+    REGEX = re.compile(
+        r'\bstruct\s+(net_sockaddr|sockaddr)\s+\w'
+    )
+
+    def run(self):
+        for fname in get_files(filter="d"):
+            if not fname.endswith(('.c', '.h', '.cpp')):
+                continue
+
+            with open(GIT_TOP / fname, encoding="utf-8") as f:
+                for lineno, line in enumerate(f, start=1):
+                    if self.REGEX.search(line):
+                        self.fmtd_failure(
+                            "warning",
+                            "SockaddrStorage",
+                            fname,
+                            line=lineno,
+                            desc="Do not declare variables of type 'struct net_sockaddr' or "
+                                 "'struct sockaddr'. Use 'struct net_sockaddr_storage' or "
+                                 "'struct sockaddr_storage' instead.",
+                        )
+
+
 class TextEncoding(ComplianceTest):
     """
     Check that any text file is encoded in ascii or utf-8.

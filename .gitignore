@@ -114,6 +114,7 @@ Nits.txt
 Pylint.txt
 PythonCompat.txt
 Ruff.txt
+SockaddrStorage.txt
 SphinxLint.txt
 SysbuildKconfig.txt
 SysbuildKconfigBasic.txt
