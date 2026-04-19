@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: 2026 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  I2C controller proxy over IPC.
+
+  Creates a virtual I2C bus that forwards all operations over an IPC endpoint
+  to a server running on another MCU (or CPU). The server executes the
+  operations on a real I2C controller.
+
+  This node must be a child of an IPC service instance. Both the client and
+  server must use the same endpoint name for binding to succeed.
+
+  Example usage (client side):
+
+  ::
+
+    +------------------+                    +-------------------+
+    | app / sensor drv |                    |                   |
+    |       |          |                    |                   |
+    | [i2c_ipc client] |--IPC endpoint---->| [i2c_ipc server]  |
+    |  (I2C controller)|                    |       |           |
+    +------------------+                    |   [real i2c ctrl] |
+                                            +-------------------+
+
+examples:
+  - |
+    &ipc0 {
+      i2c_proxy: i2c-ipc {
+        compatible = "zephyr,i2c-ipc";
+        #address-cells = <1>;
+        #size-cells = <0>;
+        status = "okay";
+
+        sensor@48 {
+          compatible = "ti,tmp116";
+          reg = <0x48>;
+        };
+      };
+    };
+
+compatible: "zephyr,i2c-ipc"
+
+include: i2c-controller.yaml
+
+properties:
+  ipc-endpoint-name:
+    type: string
+    default: "i2c_ipc"
+    description: |
+      IPC endpoint name used when registering with the parent IPC service
+      instance. Must match the endpoint name on the corresponding server.

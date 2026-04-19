@@ -1,0 +1,62 @@
+# SPDX-FileCopyrightText: 2026 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+config I2C_IPC
+	bool "I2C over IPC (client proxy)"
+	default y
+	depends on DT_HAS_ZEPHYR_I2C_IPC_ENABLED
+	select IPC_SERVICE
+	help
+	  Enable the I2C IPC proxy client driver. This creates a virtual
+	  I2C controller that forwards all operations over IPC to a
+	  server running on another CPU.
+
+if I2C_IPC
+
+config I2C_IPC_INIT_PRIORITY
+	int "I2C IPC client init priority"
+	default 51
+	help
+	  I2C IPC client driver initialization priority.
+	  Must be after the IPC backend initialization.
+
+config I2C_IPC_BUFFER_SIZE
+	int "I2C IPC transfer buffer size"
+	default 256
+	help
+	  Maximum buffer size in bytes for serialized I2C messages.
+	  Must accommodate the protocol header plus all message data.
+
+endif # I2C_IPC
+
+config I2C_IPC_SERVER
+	bool "I2C over IPC (server)"
+	default y
+	depends on DT_HAS_ZEPHYR_I2C_IPC_SERVER_ENABLED
+	select IPC_SERVICE
+	help
+	  Enable the I2C IPC proxy server driver. This receives I2C
+	  operations over IPC and forwards them to a real I2C controller.
+
+if I2C_IPC_SERVER
+
+config I2C_IPC_SERVER_INIT_PRIORITY
+	int "I2C IPC server init priority"
+	default 51
+	help
+	  I2C IPC server driver initialization priority.
+	  Must be after both the IPC backend and the real I2C controller.
+
+config I2C_IPC_SERVER_BUFFER_SIZE
+	int "I2C IPC server buffer size"
+	default 256
+	help
+	  Maximum buffer size in bytes for serialized I2C messages.
+
+config I2C_IPC_SERVER_STACK_SIZE
+	int "I2C IPC server thread stack size"
+	default 1024
+	help
+	  Stack size for the I2C IPC server processing thread.
+
+endif # I2C_IPC_SERVER

@@ -1,0 +1,39 @@
+# SPDX-FileCopyrightText: 2026 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  I2C IPC server - receives I2C operations over IPC and forwards them to a
+  real I2C controller.
+
+  This node must be a child of an IPC service instance. Both the client and
+  server must use the same endpoint name for binding to succeed.
+
+examples:
+  - |
+    #include <zephyr/dt-bindings/i2c/i2c.h>
+
+    ipc {
+      i2c-ipc-server {
+        compatible = "zephyr,i2c-ipc-server";
+        controller = <&i2c0>;
+        status = "okay";
+      };
+    };
+
+compatible: "zephyr,i2c-ipc-server"
+
+include: base.yaml
+
+properties:
+  controller:
+    type: phandle
+    required: true
+    description: |
+      Phandle to the real I2C controller that this server forwards
+      operations to.
+  ipc-endpoint-name:
+    type: string
+    default: "i2c_ipc"
+    description: |
+      IPC endpoint name used when registering with the parent IPC service
+      instance. Must match the endpoint name on the corresponding client.
