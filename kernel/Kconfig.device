@@ -41,6 +41,17 @@ config DEVICE_DEINIT_SUPPORT
 	  to do so. Note, that this will grow every struct device by a
 	  function pointer.
 
+config DEVICE_API_LOCK
+	bool "Thread-safe device API locking"
+	depends on MULTITHREADING
+	help
+	  When enabled, devices that carry the "zephyr,api-lock" devicetree
+	  property get a statically-allocated kernel mutex. Driver class headers
+	  that opt in wrap their API stubs with device_take() and device_give(),
+	  serializing concurrent access without per-driver boilerplate.
+	  Devices without the property have zero overhead even when this option
+	  is enabled.
+
 endmenu
 
 menu "Initialization Priorities"

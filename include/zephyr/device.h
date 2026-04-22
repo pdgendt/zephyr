@@ -507,6 +507,11 @@ struct device_ops {
 #endif /* CONFIG_DEVICE_DEINIT_SUPPORT */
 };
 
+/* Forward declaration required for the api_lock pointer in struct device. */
+#if defined(CONFIG_DEVICE_API_LOCK)
+struct k_mutex;
+#endif
+
 /**
  * @brief Runtime device structure (in ROM) per driver instance
  */
@@ -550,6 +555,17 @@ struct device {
 #if defined(CONFIG_DEVICE_DT_METADATA) || defined(__DOXYGEN__)
 	const struct device_dt_metadata *dt_meta;
 #endif /* CONFIG_DEVICE_DT_METADATA */
+#if defined(CONFIG_DEVICE_API_LOCK) || defined(__DOXYGEN__)
+	/**
+	 * Pointer to the mutex used to serialize API calls, or NULL when the
+	 * device does not carry the ``zephyr,api-lock`` DTS property. Only
+	 * available when @kconfig{CONFIG_DEVICE_API_LOCK} is enabled.
+	 *
+	 * Use device_take() / device_give() to acquire and release this lock.
+	 * See @ref device_lock_api.
+	 */
+	struct k_mutex *api_lock;
+#endif /* CONFIG_DEVICE_API_LOCK */
 };
 
 /**
@@ -1138,6 +1154,31 @@ device_get_dt_nodelabels(const struct device *dev)
 	};
 #endif  /* CONFIG_DEVICE_DT_METADATA */
 
+/** @cond INTERNAL_HIDDEN */
+#if defined(CONFIG_DEVICE_API_LOCK)
+/** @brief Name of the per-device API lock variable. */
+#define Z_DEVICE_API_LOCK_NAME(dev_id) _CONCAT(__dev_api_lock_, dev_id)
+
+/**
+ * @brief Allocate a static mutex for a device when the DTS node carries the
+ * ``zephyr,api-lock`` property; expands to nothing otherwise.
+ */
+#define Z_DEVICE_API_LOCK_DEFINE(dev_id, node_id)                              \
+	IF_ENABLED(DT_PROP_OR(node_id, zephyr_api_lock, 0),                    \
+		(static K_MUTEX_DEFINE(Z_DEVICE_API_LOCK_NAME(dev_id));))
+
+/**
+ * @brief Designated initializer fragment for the api_lock struct member.
+ */
+#define Z_DEVICE_API_LOCK_INIT(dev_id, node_id)                                \
+	.api_lock = COND_CODE_1(DT_PROP_OR(node_id, zephyr_api_lock, 0),       \
+		(&Z_DEVICE_API_LOCK_NAME(dev_id)), (NULL)),
+#else
+#define Z_DEVICE_API_LOCK_DEFINE(dev_id, node_id)
+#define Z_DEVICE_API_LOCK_INIT(dev_id, node_id)
+#endif /* CONFIG_DEVICE_API_LOCK */
+/** @endcond */
+
 /**
  * @brief Init sub-priority of the device
  *
@@ -1211,6 +1252,8 @@ device_get_dt_nodelabels(const struct device *dev)
 			   (IF_ENABLED(DT_NODE_EXISTS(node_id_),			\
 				       (.dt_meta = &Z_DEVICE_DT_METADATA_NAME_GET(	\
 						dev_id_),))))				\
+		IF_ENABLED(CONFIG_DEVICE_API_LOCK,					\
+			   (Z_DEVICE_API_LOCK_INIT(dev_id_, node_id_))) /**/		\
 	}
 
 /*
@@ -1324,6 +1367,9 @@ device_get_dt_nodelabels(const struct device *dev)
 	IF_ENABLED(CONFIG_DEVICE_DT_METADATA,                                   \
 		   (IF_ENABLED(DT_NODE_EXISTS(node_id),                         \
 			      (Z_DEVICE_DT_METADATA_DEFINE(node_id, dev_id);))))\
+                                                                                \
+	IF_ENABLED(CONFIG_DEVICE_API_LOCK,                                      \
+		   (Z_DEVICE_API_LOCK_DEFINE(dev_id, node_id);))                \
                                                                                 \
 	Z_DEVICE_BASE_DEFINE(node_id, dev_id, name, init_fn, deinit_fn, flags,  \
 			     pm, data, config, level, prio, api, state,         \

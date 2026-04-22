@@ -225,3 +225,11 @@ properties:
     description: |
       Do not initialize device automatically on boot. Device should be manually
       initialized using device_init().
+
+  zephyr,api-lock:
+    type: boolean
+    description: |
+      Automatically serialize device driver API calls using a kernel mutex.
+      When set, a mutex is allocated for the device and wraps API calls in
+      driver class headers that opt in to this mechanism. Requires
+      CONFIG_DEVICE_API_LOCK to be enabled.
