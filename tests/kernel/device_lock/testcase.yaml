@@ -1,0 +1,13 @@
+common:
+  tags:
+    - device
+    - kernel
+tests:
+  kernel.device_lock:
+    integration_platforms:
+      - native_sim
+  kernel.device_lock.disabled:
+    integration_platforms:
+      - native_sim
+    extra_configs:
+      - CONFIG_DEVICE_API_LOCK=n

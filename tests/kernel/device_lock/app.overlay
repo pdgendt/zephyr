@@ -1,0 +1,16 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	fakelockdriver_locked: fakelockdriver_locked {
+		compatible = "fakelockdriver";
+		status = "okay";
+		zephyr,api-lock;
+	};
+
+	fakelockdriver_unlocked: fakelockdriver_unlocked {
+		compatible = "fakelockdriver";
+		status = "okay";
+	};
+};
