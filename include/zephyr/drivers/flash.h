@@ -27,6 +27,7 @@
 #include <stddef.h>
 #include <sys/types.h>
 #include <zephyr/device.h>
+#include <zephyr/device_lock.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -268,7 +269,12 @@ static inline int z_impl_flash_read(const struct device *dev, off_t offset,
 				    void *data,
 				    size_t len)
 {
-	return DEVICE_API_GET(flash, dev)->read(dev, offset, data, len);
+	int ret;
+
+	device_take(dev, K_FOREVER);
+	ret = DEVICE_API_GET(flash, dev)->read(dev, offset, data, len);
+	device_give(dev);
+	return ret;
 }
 
 /**
@@ -296,7 +302,12 @@ __syscall int flash_write(const struct device *dev, off_t offset,
 static inline int z_impl_flash_write(const struct device *dev, off_t offset,
 				     const void *data, size_t len)
 {
-	return DEVICE_API_GET(flash, dev)->write(dev, offset, data, len);
+	int ret;
+
+	device_take(dev, K_FOREVER);
+	ret = DEVICE_API_GET(flash, dev)->write(dev, offset, data, len);
+	device_give(dev);
+	return ret;
 }
 
 /**
@@ -333,13 +344,13 @@ static inline int z_impl_flash_erase(const struct device *dev, off_t offset,
 				     size_t size)
 {
 	int rc = -ENOSYS;
-
 	const struct flash_driver_api *api = DEVICE_API_GET(flash, dev);
 
+	device_take(dev, K_FOREVER);
 	if (api->erase != NULL) {
 		rc = api->erase(dev, offset, size);
 	}
-
+	device_give(dev);
 	return rc;
 }
 
