@@ -86,3 +86,23 @@ __weak void assert_print(const char *fmt, ...)
 	va_end(ap);
 }
 EXPORT_SYMBOL(assert_print);
+
+#ifdef _Z_ASSERT_USE_HANDLER
+/*
+ * Consolidated cold path for __ASSERT(): one out-of-line call replaces three
+ * call-site emissions (assert_print for location, assert_print for message,
+ * assert_post_action).
+ */
+void z_assert_handler(const char *cond, const char *file, unsigned int line,
+		      const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	assert_pre_action(cond, file, line, fmt, ap);
+	va_end(ap);
+
+	assert_post_action(file, line);
+}
+EXPORT_SYMBOL(z_assert_handler);
+#endif

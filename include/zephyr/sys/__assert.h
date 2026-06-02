@@ -74,6 +74,20 @@ void __printf_like(1, 2) assert_print(const char *fmt, ...);
 
 #if __ASSERT_ON
 
+/*
+ * Internal: route the failure path through a single out-of-line handler
+ * (z_assert_handler) when the default config applies — i.e. verbose output
+ * with both file and condition info. The NO_FILE_INFO / NO_COND_INFO knobs
+ * are about stripping per-call-site emissions, which the legacy per-piece
+ * expansion does naturally; the handler path is the optimization for the
+ * common case.
+ */
+#if defined(CONFIG_ASSERT_VERBOSE) &&                                          \
+	!defined(CONFIG_ASSERT_NO_COND_INFO) &&                                \
+	!defined(CONFIG_ASSERT_NO_FILE_INFO)
+#define _Z_ASSERT_USE_HANDLER 1
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -96,6 +110,17 @@ void assert_post_action(const char *file, unsigned int line);
 #define __ASSERT_POST_ACTION() assert_post_action(__FILE__, __LINE__)
 #endif /* CONFIG_ASSERT_NO_FILE_INFO */
 
+#ifdef _Z_ASSERT_USE_HANDLER
+/*
+ * Out-of-line failure handler. Calls assert_pre_action() and
+ * assert_post_action() in turn. A single call here replaces the three
+ * emissions (location print, message print, post_action) the legacy
+ * expansion produces at each __ASSERT() call site, shrinking the cold path.
+ */
+void __printf_like(4, 5) z_assert_handler(const char *cond, const char *file,
+					  unsigned int line, const char *fmt, ...);
+#endif
+
 /*
  * When the assert test mode is enabled, the default kernel fatal error handler
  * and the custom assert hook function may return in order to allow the test to
@@ -112,11 +137,22 @@ void assert_post_action(const char *file, unsigned int line);
 #endif
 
 /*
- * Internal: the per-assert failure body. Factored out so that __ASSERT() and
- * __ASSERT_NO_MSG() have a single definition; the body itself can be swapped
- * out (e.g. for an out-of-line handler) without touching the user-facing
- * macros.
+ * Internal: the per-assert failure body. __ASSERT() and __ASSERT_NO_MSG()
+ * call into these so the user-facing macros have a single definition; the
+ * body switches between an out-of-line handler and a per-piece expansion
+ * depending on what assert info is enabled.
  */
+#ifdef _Z_ASSERT_USE_HANDLER
+
+#define _Z_ASSERT_FAIL_NO_MSG(test)                                            \
+	z_assert_handler(Z_STRINGIFY(test), __FILE__, __LINE__, NULL)
+
+#define _Z_ASSERT_FAIL(test, fmt, ...)                                         \
+	z_assert_handler(Z_STRINGIFY(test), __FILE__, __LINE__,                \
+			 "\t" fmt "\n", ##__VA_ARGS__)
+
+#else /* per-piece expansion */
+
 #define _Z_ASSERT_FAIL_NO_MSG(test)                                            \
 	do {                                                                   \
 		__ASSERT_LOC(test);                                            \
@@ -129,6 +165,8 @@ void assert_post_action(const char *file, unsigned int line);
 		__ASSERT_MSG_INFO(fmt, ##__VA_ARGS__);                         \
 		__ASSERT_POST_ACTION();                                        \
 	} while (false)
+
+#endif
 
 #define __ASSERT_NO_MSG(test)                                                  \
 	do {                                                                   \
