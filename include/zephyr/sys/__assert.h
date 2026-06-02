@@ -100,23 +100,39 @@ void assert_post_action(const char *file, unsigned int line);
 }
 #endif
 
-#define __ASSERT_NO_MSG(test)                                             \
-	do {                                                              \
-		if (!(test)) {                                            \
-			__ASSERT_LOC(test);                               \
-			__ASSERT_POST_ACTION();                           \
-			__ASSERT_UNREACHABLE;                             \
-		}                                                         \
+/*
+ * Internal: the per-assert failure body. Factored out so that __ASSERT() and
+ * __ASSERT_NO_MSG() have a single definition; the body itself can be swapped
+ * out (e.g. for an out-of-line handler) without touching the user-facing
+ * macros.
+ */
+#define _Z_ASSERT_FAIL_NO_MSG(test)                                            \
+	do {                                                                   \
+		__ASSERT_LOC(test);                                            \
+		__ASSERT_POST_ACTION();                                        \
 	} while (false)
 
-#define __ASSERT(test, fmt, ...)                                          \
-	do {                                                              \
-		if (!(test)) {                                            \
-			__ASSERT_LOC(test);                               \
-			__ASSERT_MSG_INFO(fmt, ##__VA_ARGS__);            \
-			__ASSERT_POST_ACTION();                           \
-			__ASSERT_UNREACHABLE;                             \
-		}                                                         \
+#define _Z_ASSERT_FAIL(test, fmt, ...)                                         \
+	do {                                                                   \
+		__ASSERT_LOC(test);                                            \
+		__ASSERT_MSG_INFO(fmt, ##__VA_ARGS__);                         \
+		__ASSERT_POST_ACTION();                                        \
+	} while (false)
+
+#define __ASSERT_NO_MSG(test)                                                  \
+	do {                                                                   \
+		if (!(test)) {                                                 \
+			_Z_ASSERT_FAIL_NO_MSG(test);                           \
+			__ASSERT_UNREACHABLE;                                  \
+		}                                                              \
+	} while (false)
+
+#define __ASSERT(test, fmt, ...)                                               \
+	do {                                                                   \
+		if (!(test)) {                                                 \
+			_Z_ASSERT_FAIL(test, fmt, ##__VA_ARGS__);              \
+			__ASSERT_UNREACHABLE;                                  \
+		}                                                              \
 	} while (false)
 
 #define __ASSERT_EVAL(expr1, expr2, test, fmt, ...)                \
