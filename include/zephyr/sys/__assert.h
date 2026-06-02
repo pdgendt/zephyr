@@ -7,6 +7,7 @@
 #ifndef ZEPHYR_INCLUDE_SYS___ASSERT_H_
 #define ZEPHYR_INCLUDE_SYS___ASSERT_H_
 
+#include <stdarg.h>
 #include <stdbool.h>
 #include <zephyr/toolchain.h>
 
@@ -76,6 +77,16 @@ void __printf_like(1, 2) assert_print(const char *fmt, ...);
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/*
+ * Override point: called once per failing assertion, before
+ * assert_post_action(). Default implementation prints the location via
+ * assert_print() and the user message via vprintk(). System designers may
+ * override this to capture the assertion output to a buffer or redirect it
+ * elsewhere.
+ */
+void assert_pre_action(const char *cond, const char *file, unsigned int line,
+		       const char *fmt, va_list ap);
 
 #ifdef CONFIG_ASSERT_NO_FILE_INFO
 void assert_post_action(void);

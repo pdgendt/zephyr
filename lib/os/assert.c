@@ -45,6 +45,27 @@ __weak void assert_post_action(const char *file, unsigned int line)
 EXPORT_SYMBOL(assert_post_action);
 
 /**
+ * @brief Assert Pre Action Handler
+ *
+ * Override point for the assertion output. Called once per failing assertion,
+ * before assert_post_action(). The default implementation prints the
+ * assertion location via assert_print() and the user message via vprintk().
+ *
+ * System designers may wish to substitute this implementation to capture the
+ * assertion output to a buffer, redirect it elsewhere, etc.
+ */
+__weak void assert_pre_action(const char *cond, const char *file,
+			      unsigned int line, const char *fmt, va_list ap)
+{
+	assert_print("ASSERTION FAIL [%s] @ %s:%d\n", cond, file, line);
+
+	if (fmt != NULL) {
+		vprintk(fmt, ap);
+	}
+}
+EXPORT_SYMBOL(assert_pre_action);
+
+/**
  * @brief Assert Print Handler
  *
  * This routine implements printing the assertion message.
