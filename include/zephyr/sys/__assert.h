@@ -170,7 +170,7 @@ void __printf_like(4, 5) z_assert_handler(const char *cond, const char *file,
 
 #define __ASSERT_NO_MSG(test)                                                  \
 	do {                                                                   \
-		if (!(test)) {                                                 \
+		if (unlikely(!(test))) {                                       \
 			_Z_ASSERT_FAIL_NO_MSG(test);                           \
 			__ASSERT_UNREACHABLE;                                  \
 		}                                                              \
@@ -178,7 +178,7 @@ void __printf_like(4, 5) z_assert_handler(const char *cond, const char *file,
 
 #define __ASSERT(test, fmt, ...)                                               \
 	do {                                                                   \
-		if (!(test)) {                                                 \
+		if (unlikely(!(test))) {                                       \
 			_Z_ASSERT_FAIL(test, fmt, ##__VA_ARGS__);              \
 			__ASSERT_UNREACHABLE;                                  \
 		}                                                              \
