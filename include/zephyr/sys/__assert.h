@@ -10,20 +10,22 @@
 #include <stdbool.h>
 #include <zephyr/toolchain.h>
 
-#ifdef CONFIG_ASSERT
-#ifndef __ASSERT_ON
-#ifdef CONFIG_ASSERT_LEVEL
-#define __ASSERT_ON CONFIG_ASSERT_LEVEL
-#endif
-#endif
-#endif
-
-#ifdef CONFIG_FORCE_NO_ASSERT
+/*
+ * __ASSERT_ON resolution, in priority order:
+ *   1. CONFIG_FORCE_NO_ASSERT forces 0 (overrides everything, including an
+ *      externally-defined __ASSERT_ON).
+ *   2. An externally-defined __ASSERT_ON is honored.
+ *   3. CONFIG_ASSERT + CONFIG_ASSERT_LEVEL: use the configured level.
+ *   4. Default to 0.
+ */
+#if defined(CONFIG_FORCE_NO_ASSERT)
 #undef __ASSERT_ON
 #define __ASSERT_ON 0
-#endif
-
-#ifndef __ASSERT_ON
+#elif defined(__ASSERT_ON)
+/* external __ASSERT_ON: leave as-is */
+#elif defined(CONFIG_ASSERT) && defined(CONFIG_ASSERT_LEVEL)
+#define __ASSERT_ON CONFIG_ASSERT_LEVEL
+#else
 #define __ASSERT_ON 0
 #endif
 
@@ -51,30 +53,20 @@ void __printf_like(1, 2) assert_print(const char *fmt, ...);
 #endif /* CONFIG_ASSERT_NO_MSG_INFO */
 
 #if !defined(CONFIG_ASSERT_NO_COND_INFO) && !defined(CONFIG_ASSERT_NO_FILE_INFO)
-#define __ASSERT_LOC(test)                              \
-	__ASSERT_PRINT("ASSERTION FAIL [%s] @ %s:%d\n", \
-		Z_STRINGIFY(test),                      \
-		__FILE__, __LINE__)
-#endif
-
-#if defined(CONFIG_ASSERT_NO_COND_INFO) && !defined(CONFIG_ASSERT_NO_FILE_INFO)
-#define __ASSERT_LOC(test)                         \
-	__ASSERT_PRINT("ASSERTION FAIL @ %s:%d\n", \
-		__FILE__, __LINE__)
-#endif
-
-#if !defined(CONFIG_ASSERT_NO_COND_INFO) && defined(CONFIG_ASSERT_NO_FILE_INFO)
-#define __ASSERT_LOC(test)                      \
-	__ASSERT_PRINT("ASSERTION FAIL [%s]\n", \
-		Z_STRINGIFY(test))
-#endif
-
-#if defined(CONFIG_ASSERT_NO_COND_INFO) && defined(CONFIG_ASSERT_NO_FILE_INFO)
-#define __ASSERT_LOC(test)                 \
+#define __ASSERT_LOC(test)                                                     \
+	__ASSERT_PRINT("ASSERTION FAIL [%s] @ %s:%d\n",                        \
+		       Z_STRINGIFY(test), __FILE__, __LINE__)
+#elif defined(CONFIG_ASSERT_NO_COND_INFO) && !defined(CONFIG_ASSERT_NO_FILE_INFO)
+#define __ASSERT_LOC(test)                                                     \
+	__ASSERT_PRINT("ASSERTION FAIL @ %s:%d\n", __FILE__, __LINE__)
+#elif !defined(CONFIG_ASSERT_NO_COND_INFO) && defined(CONFIG_ASSERT_NO_FILE_INFO)
+#define __ASSERT_LOC(test)                                                     \
+	__ASSERT_PRINT("ASSERTION FAIL [%s]\n", Z_STRINGIFY(test))
+#else
+#define __ASSERT_LOC(test)                                                     \
 	__ASSERT_PRINT("ASSERTION FAIL\n")
 #endif
 
-#ifdef __ASSERT_ON
 #if (__ASSERT_ON < 0) || (__ASSERT_ON > 2)
 #error "Invalid __ASSERT() level: must be between 0 and 2"
 #endif
@@ -136,18 +128,15 @@ void assert_post_action(const char *file, unsigned int line);
 #if (__ASSERT_ON == 1)
 #warning "__ASSERT() statements are ENABLED"
 #endif
-#else
+
+#else /* __ASSERT_ON == 0 */
+
 #define __ASSERT(test, fmt, ...) { }
 #define __ASSERT_EVAL(expr1, expr2, test, fmt, ...) expr1
 #define __ASSERT_NO_MSG(test) { }
 #define __ASSERT_POST_ACTION() { }
-#endif
-#else
-#define __ASSERT(test, fmt, ...) { }
-#define __ASSERT_EVAL(expr1, expr2, test, fmt, ...) expr1
-#define __ASSERT_NO_MSG(test) { }
-#define __ASSERT_POST_ACTION() { }
-#endif
+
+#endif /* __ASSERT_ON */
 
 #ifdef CONFIG_ASSERT_CUSTOM_HEADER
 /* This include must always be at the end of __assert.h */
