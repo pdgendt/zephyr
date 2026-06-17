@@ -4,3 +4,4 @@
 zephyr_library()
 zephyr_library_sources(wifi_emul.c)
 zephyr_library_sources_ifdef(CONFIG_WIFI_EMUL_SHELL wifi_emul_shell.c)
+zephyr_library_sources_ifdef(CONFIG_WIFI_EMUL_NATIVE_CMDLINE wifi_emul_native.c)

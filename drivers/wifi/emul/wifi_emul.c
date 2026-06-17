@@ -21,6 +21,10 @@ LOG_MODULE_REGISTER(wifi_emul, CONFIG_WIFI_LOG_LEVEL);
 #include <zephyr/net/wifi_mgmt.h>
 #include <zephyr/sys/util.h>
 
+#ifdef CONFIG_WIFI_EMUL_NATIVE_CMDLINE
+void wifi_emul_native_load_aps(const struct device *dev);
+#endif
+
 enum wifi_emul_state {
 	WIFI_EMUL_IDLE,
 	WIFI_EMUL_CONNECTING,
@@ -727,6 +731,13 @@ static int wifi_emul_dev_init(const struct device *dev)
 	data->forced_conn_status = -1;
 	data->scan_delay = K_MSEC(CONFIG_WIFI_EMUL_SCAN_DELAY_MS);
 	data->connect_delay = K_MSEC(CONFIG_WIFI_EMUL_CONNECT_DELAY_MS);
+
+#ifdef CONFIG_WIFI_EMUL_NATIVE_CMDLINE
+	/* Register access points provided on the native command line so they
+	 * exist before the application's on-boot connect.
+	 */
+	wifi_emul_native_load_aps(dev);
+#endif
 
 	return 0;
 }

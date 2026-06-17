@@ -50,4 +50,14 @@ config WIFI_EMUL_SHELL
 	  driver at runtime: register virtual access points, tune scan and
 	  connect delays, force connection results and emulate disconnects.
 
+config WIFI_EMUL_NATIVE_CMDLINE
+	bool "Register virtual access points from the native command line"
+	depends on ARCH_POSIX
+	default y
+	help
+	  Add a repeatable --wifi-emul-ap=<spec> option to the native_sim
+	  executable to register virtual access points at boot, before the
+	  application performs its on-boot connect. Intended for integration
+	  test harnesses that vary the access points per run without rebuilding.
+
 endif # WIFI_EMUL
