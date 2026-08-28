@@ -9,6 +9,7 @@
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/ztest.h>
 
+#include "rtp_srtp.h"
 #include "srtp_crypto.h"
 
 #define KAT_SSRC 0xcafebabe
@@ -666,6 +667,59 @@ ZTEST(srtp_tests, test_deinit_destroys_keys)
 	memcpy(buf, kat_rtp, sizeof(kat_rtp));
 	zassert_true(srtp_protect(&tx_stream, buf, sizeof(kat_rtp), sizeof(buf), &out_len) < 0,
 		     "Destroyed keys are unusable");
+}
+
+ZTEST(srtp_tests, test_session_set_srtp)
+{
+	static struct rtp_session session;
+	static struct srtp_session_ctx ctx;
+
+	memset(&session, 0, sizeof(session));
+	session.ssrc = KAT_SSRC;
+
+	zassert_equal(rtp_session_set_srtp(NULL, &policy_cm_sha1_80, NULL, &ctx), -EINVAL);
+	zassert_equal(rtp_session_set_srtp(&session, NULL, NULL, &ctx), -EINVAL);
+	zassert_equal(rtp_session_set_srtp(&session, &policy_cm_sha1_80, NULL, NULL), -EINVAL);
+
+	zassert_ok(rtp_session_set_srtp(&session, &policy_cm_sha1_80, &policy_cm_sha1_80, &ctx));
+	zassert_equal(rtp_session_set_srtp(&session, &policy_cm_sha1_80, NULL, &ctx), -EALREADY);
+
+	zassert_ok(rtp_session_clear_srtp(&session));
+	zassert_is_null(session.srtp);
+
+	zassert_ok(rtp_session_set_srtp(&session, &policy_cm_sha1_80, NULL, &ctx));
+	zassert_ok(rtp_session_clear_srtp(&session));
+}
+
+ZTEST(srtp_tests, test_session_rx_slot_recovery)
+{
+	static struct rtp_session session;
+	static struct srtp_session_ctx ctx;
+	uint8_t buf[128];
+	size_t out_len = 0;
+
+	memset(&session, 0, sizeof(session));
+
+	zassert_ok(rtp_session_set_srtp(&session, NULL, &policy_cm_sha1_80, &ctx));
+
+	/* Unauthenticated packets with distinct SSRCs must not pin receive
+	 * stream slots (changing the SSRC invalidates the tag).
+	 */
+	for (uint32_t i = 0; i < CONFIG_SRTP_MAX_RX_STREAMS + 2; i++) {
+		memcpy(buf, kat_srtp_cm_sha1_80, sizeof(kat_srtp_cm_sha1_80));
+		sys_put_be32(0x1000 + i, &buf[8]);
+		zassert_equal(
+			rtp_srtp_unprotect(&session, buf, sizeof(kat_srtp_cm_sha1_80), &out_len),
+			-EBADMSG);
+	}
+
+	/* The legitimate source still binds a stream and unprotects */
+	memcpy(buf, kat_srtp_cm_sha1_80, sizeof(kat_srtp_cm_sha1_80));
+	zassert_ok(rtp_srtp_unprotect(&session, buf, sizeof(kat_srtp_cm_sha1_80), &out_len));
+	zassert_equal(out_len, sizeof(kat_rtp));
+	zassert_mem_equal(buf, kat_rtp, out_len);
+
+	zassert_ok(rtp_session_clear_srtp(&session));
 }
 
 ZTEST_SUITE(srtp_tests, NULL, NULL, NULL, streams_deinit, NULL);
