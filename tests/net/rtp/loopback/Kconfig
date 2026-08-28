@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Basalte bv
+# SPDX-License-Identifier: Apache-2.0
+
+config RTP_LOOPBACK_TEST_SRTP_GCM
+	bool "Use AES-GCM for the SRTP loopback permutations"
+	help
+	  Protect the loopback session with AES-128-GCM instead of
+	  AES-128-CM with HMAC-SHA1-80.
+
+source "Kconfig.zephyr"
