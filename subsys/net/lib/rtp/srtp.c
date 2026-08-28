@@ -311,8 +311,12 @@ static int srtp_refresh_session_keys(struct srtp_stream *stream, uint64_t index)
 	return srtp_derive_session_keys(stream, segment);
 }
 
-static int srtp_policy_validate(const struct srtp_policy *policy)
+int srtp_policy_validate(const struct srtp_policy *policy)
 {
+	if (policy == NULL) {
+		return -EINVAL;
+	}
+
 	switch (policy->cipher) {
 	case SRTP_CIPHER_NULL:
 		break;
