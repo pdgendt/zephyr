@@ -1002,16 +1002,30 @@ int coap_find_options(const struct coap_packet *cpkt, uint16_t code,
 	num = 0U;
 
 	while (delta <= code && num < veclen && offset < end) {
-		r = parse_option(cpkt->data, offset, &offset,
-				 end, &delta, &opt_len,
-				 &options[num]);
+		uint16_t opt_delta = delta;
+		uint16_t next;
+
+		/* Skip the value: only that of a matching option has to fit */
+		r = parse_option(cpkt->data, offset, &next, end, &opt_delta, &opt_len, NULL);
 		if (r < 0) {
 			return -EINVAL;
 		}
 
-		if (code == options[num].delta) {
+		if (opt_delta == code) {
+			opt_delta = delta;
+			opt_len = 0U;
+
+			r = parse_option(cpkt->data, offset, &next, end, &opt_delta, &opt_len,
+					 &options[num]);
+			if (r < 0) {
+				return -EINVAL;
+			}
+
 			num++;
 		}
+
+		delta = opt_delta;
+		offset = next;
 
 		if (r == 0) {
 			break;
