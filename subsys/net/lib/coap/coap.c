@@ -673,6 +673,48 @@ static void remove_option_data(struct coap_packet *cpkt,
 	cpkt->offset -= move_size;
 }
 
+/* Rewrite the code delta of the option at `offset`, leaving its length and
+ * value where they are, so an option of any length can be adjusted.
+ */
+static int update_option_delta(struct coap_packet *cpkt, uint16_t offset, uint16_t delta)
+{
+	const uint8_t opt = cpkt->data[offset];
+	const uint8_t old_delta = option_header_get_delta(opt);
+	uint16_t old_ext_size = 0;
+	uint16_t delta_ext;
+	uint8_t opt_delta;
+	uint8_t ext_size;
+	uint8_t hdr;
+	bool res = true;
+
+	if (old_delta == COAP_OPTION_EXT_13) {
+		old_ext_size = 1;
+	} else if (old_delta == COAP_OPTION_EXT_14) {
+		old_ext_size = 2;
+	}
+
+	remove_option_data(cpkt, offset + 1, offset + 1 + old_ext_size);
+
+	ext_size = encode_extended_option(delta, &opt_delta, &delta_ext);
+	option_header_set_delta(&hdr, opt_delta);
+	option_header_set_len(&hdr, option_header_get_len(opt));
+	cpkt->data[offset] = hdr;
+
+	if (ext_size == 1U) {
+		res = insert_u8(cpkt, (uint8_t)delta_ext, offset + 1);
+	} else if (ext_size == 2U) {
+		res = insert_be16(cpkt, delta_ext, offset + 1);
+	}
+
+	if (!res) {
+		return -EINVAL;
+	}
+
+	cpkt->opt_len += ext_size;
+
+	return 0;
+}
+
 /* Remove an option (that is not the last one).
  * Also adjusting the code delta of the option following the removed one.
  */
@@ -683,28 +725,21 @@ static int remove_middle_option(struct coap_packet *cpkt,
 				const uint16_t previous_code)
 {
 	int r;
-	struct coap_option option;
 	uint16_t opt_len = 0;
+	uint16_t next_offset;
 
-	/* get the option after the removed one */
-	r = parse_option(cpkt->data, offset, &offset, cpkt->hdr_len + cpkt->opt_len,
-			 &opt_delta, &opt_len, &option);
+	/* get the code of the option after the removed one */
+	r = parse_option(cpkt->data, offset, &next_offset, cpkt->hdr_len + cpkt->opt_len,
+			 &opt_delta, &opt_len, NULL);
 	if (r < 0) {
 		return -EILSEQ;
 	}
 
-	/* clear requested option and the one after (delta changed) */
+	/* clear requested option */
 	remove_option_data(cpkt, previous_offset, offset);
 
-	/* reinsert option that comes after the removed option (with adjusted delta) */
-	r = encode_option(cpkt, option.delta - previous_code, option.value, option.len,
-			  previous_offset);
-	if (r < 0) {
-		return -EINVAL;
-	}
-	cpkt->opt_len += r;
-
-	return 0;
+	/* the option that comes after the removed option now follows the previous one */
+	return update_option_delta(cpkt, previous_offset, opt_delta - previous_code);
 }
 int coap_packet_remove_option(struct coap_packet *cpkt, uint16_t code)
 {
@@ -713,7 +748,6 @@ int coap_packet_remove_option(struct coap_packet *cpkt, uint16_t code)
 	uint16_t opt_len = 0;
 	uint16_t previous_offset = 0;
 	uint16_t previous_code = 0;
-	struct coap_option option;
 	int r;
 
 	if (!cpkt) {
@@ -734,7 +768,7 @@ int coap_packet_remove_option(struct coap_packet *cpkt, uint16_t code)
 	/* Find the requested option */
 	while (offset < cpkt->hdr_len + cpkt->opt_len) {
 		r = parse_option(cpkt->data, offset, &offset, cpkt->hdr_len + cpkt->opt_len,
-				 &opt_delta, &opt_len, &option);
+				 &opt_delta, &opt_len, NULL);
 		if (r < 0) {
 			return -EILSEQ;
 		}
@@ -1466,12 +1500,11 @@ int insert_option(struct coap_packet *cpkt, uint16_t code, const uint8_t *value,
 	uint16_t opt_len = 0;
 	uint16_t last_opt = 0;
 	uint16_t last_offset = cpkt->hdr_len;
-	struct coap_option option = {0};
 	int r;
 
 	while (offset < cpkt->hdr_len + cpkt->opt_len) {
 		r = parse_option(cpkt->data, offset, &offset, cpkt->hdr_len + cpkt->opt_len,
-				 &opt_delta, &opt_len, &option);
+				 &opt_delta, &opt_len, NULL);
 		if (r < 0) {
 			return -EILSEQ;
 		}
@@ -1484,23 +1517,16 @@ int insert_option(struct coap_packet *cpkt, uint16_t code, const uint8_t *value,
 		last_offset = offset;
 	}
 
-	const uint16_t option_size = offset - last_offset;
-	/* clear option after new option (delta changed) */
-	memmove(cpkt->data + last_offset, cpkt->data + offset, cpkt->offset - offset);
-	cpkt->opt_len -= option_size;
-	cpkt->offset -= option_size;
+	/* the option after the new option follows it (delta changed) */
+	r = update_option_delta(cpkt, last_offset, opt_delta - code);
+	if (r < 0) {
+		return r;
+	}
 
 	/* add the new option */
 	const uint16_t new_option_delta = code - last_opt;
 
 	r = encode_option(cpkt, new_option_delta, value, len, last_offset);
-	if (r < 0) {
-		return -EINVAL;
-	}
-	cpkt->opt_len += r;
-
-	/* reinsert option that comes after the new option (with adjusted delta) */
-	r = encode_option(cpkt, option.delta - code, option.value, option.len, last_offset + r);
 	if (r < 0) {
 		return -EINVAL;
 	}
