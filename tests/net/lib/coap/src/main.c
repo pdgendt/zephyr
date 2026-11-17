@@ -2138,6 +2138,219 @@ ZTEST(coap, test_remove_non_existent_coap_option)
 	ASSERT_OPTIONS_AND_PAYLOAD(cpkt, 4, expected_original_msg, 18, 17);
 }
 
+#define OPTION_LAYOUT_BUF_SIZE 1024
+#define OPTION_LAYOUT_MAX_OPTIONS 4
+#define OPTION_LAYOUT_MAX_LEN 300
+
+/* The options of a message, in ascending order, and whether it has a payload */
+struct option_layout {
+	struct {
+		uint16_t code;
+		uint16_t len;
+	} options[OPTION_LAYOUT_MAX_OPTIONS];
+	uint8_t num_options;
+	bool payload;
+};
+
+/* Every form of the option delta and of the option length (in the option
+ * header, in one more byte from 13, in two more bytes from 269), the changes
+ * from one delta form to another when an option in front is inserted or
+ * removed, and values longer than struct coap_option holds.
+ */
+static const struct option_layout option_layouts[] = {
+	/* deltas and lengths in the option header, up to its limits */
+	{{{1, 0}, {2, 1}, {14, 12}, {15, 3}}, 4, true},
+	/* the delta moves between the header and one more byte */
+	{{{1, 13}, {13, 20}, {14, 4}}, 3, true},
+	/* the delta moves between one and two more bytes, lengths do as well */
+	{{{2, 268}, {14, 269}, {282, OPTION_LAYOUT_MAX_LEN}}, 3, true},
+	/* the delta moves between the header and two more bytes */
+	{{{1, 4}, {269, 14}, {270, 13}}, 3, false},
+	/* deltas in two more bytes that stay there */
+	{{{300, 13}, {900, 268}, {1500, 14}, {2100, 0}}, 4, true},
+	/* repeated options, without payload */
+	{{{11, 24}, {11, 30}, {15, 12}, {15, 0}}, 4, false},
+	/* Uri-Path, Echo and Request-Tag */
+	{{{COAP_OPTION_URI_PATH, 24}, {COAP_OPTION_ECHO, 10}, {COAP_OPTION_REQUEST_TAG, 20}},
+	 3, true},
+	/* the last option behind a long one */
+	{{{COAP_OPTION_URI_PATH, 24}, {COAP_OPTION_ECHO, 10}}, 2, true},
+	/* a single option */
+	{{{20, OPTION_LAYOUT_MAX_LEN}}, 1, true},
+};
+
+ZTEST_DEFINE_PARAM_VALUES_ARRAY(option_layout_values, option_layouts);
+
+/* A byte of the value of an option, which differs between the options of a layout */
+static uint8_t option_layout_value(size_t idx, size_t pos)
+{
+	return (uint8_t)(idx + pos);
+}
+
+static void option_layout_append(struct coap_packet *cpkt, const struct option_layout *layout,
+				 size_t idx)
+{
+	uint8_t value[OPTION_LAYOUT_MAX_LEN];
+	int r;
+
+	zassert_true(layout->options[idx].len <= sizeof(value), "Option %zu too long", idx);
+
+	for (size_t i = 0; i < layout->options[idx].len; i++) {
+		value[i] = option_layout_value(idx, i);
+	}
+
+	r = coap_packet_append_option(cpkt, layout->options[idx].code, value,
+				      layout->options[idx].len);
+	zassert_ok(r, "Could not append option %zu", idx);
+}
+
+/* Build the message of a layout in order, without the option at `skip` */
+static void option_layout_init(struct coap_packet *cpkt, uint8_t *data,
+			       const struct option_layout *layout, size_t skip)
+{
+	static const char token[] = "token";
+	static const uint8_t test_payload[] = {0xde, 0xad, 0xbe, 0xef};
+	int r;
+
+	r = coap_packet_init(cpkt, data, OPTION_LAYOUT_BUF_SIZE, COAP_VERSION_1, COAP_TYPE_CON,
+			     strlen(token), token, COAP_METHOD_POST, 0x1234);
+	zassert_ok(r, "Could not initialize packet");
+
+	for (size_t i = 0; i < layout->num_options; i++) {
+		if (i != skip) {
+			option_layout_append(cpkt, layout, i);
+		}
+	}
+
+	if (layout->payload) {
+		r = coap_packet_append_payload_marker(cpkt);
+		zassert_ok(r, "Could not append payload marker");
+
+		r = coap_packet_append_payload(cpkt, test_payload, ARRAY_SIZE(test_payload));
+		zassert_ok(r, "Could not append test payload");
+	}
+}
+
+static void assert_same_msg(const struct coap_packet *cpkt, const struct coap_packet *expected,
+			    size_t idx)
+{
+	zassert_equal(cpkt->hdr_len, expected->hdr_len, "Wrong header length, option %zu", idx);
+	zassert_equal(cpkt->opt_len, expected->opt_len, "Wrong option length, option %zu", idx);
+	zassert_equal(cpkt->delta, expected->delta, "Wrong delta, option %zu", idx);
+	zassert_equal(cpkt->offset, expected->offset, "Wrong offset, option %zu", idx);
+	zassert_mem_equal(cpkt->data, expected->data, expected->offset, "Wrong data, option %zu",
+			  idx);
+}
+
+/* Removing any option leaves the message as built without it */
+ZTEST_P(coap, test_remove_coap_option_layout)
+{
+	static uint8_t buf[2][OPTION_LAYOUT_BUF_SIZE];
+	const struct option_layout *layout = ZTEST_GET_PARAM_PTR(struct option_layout);
+	struct coap_packet cpkt;
+	struct coap_packet expected;
+	int r;
+
+	for (size_t i = 0; i < layout->num_options; i++) {
+		if (i > 0 && layout->options[i - 1].code == layout->options[i].code) {
+			/* the first option of that code is the one removed */
+			continue;
+		}
+
+		option_layout_init(&cpkt, buf[0], layout, layout->num_options);
+		option_layout_init(&expected, buf[1], layout, i);
+
+		r = coap_packet_remove_option(&cpkt, layout->options[i].code);
+		zassert_ok(r, "Could not remove option %zu", i);
+		assert_same_msg(&cpkt, &expected, i);
+	}
+}
+
+/* Appending any option last puts it where it is in the message built in order */
+ZTEST_P(coap, test_append_coap_option_layout)
+{
+	static uint8_t buf[2][OPTION_LAYOUT_BUF_SIZE];
+	const struct option_layout *layout = ZTEST_GET_PARAM_PTR(struct option_layout);
+	struct coap_packet cpkt;
+	struct coap_packet expected;
+
+	option_layout_init(&expected, buf[1], layout, layout->num_options);
+
+	for (size_t i = 0; i < layout->num_options; i++) {
+		if (i + 1 < layout->num_options &&
+		    layout->options[i + 1].code == layout->options[i].code) {
+			/* an appended option follows those of the same code */
+			continue;
+		}
+
+		option_layout_init(&cpkt, buf[0], layout, i);
+		option_layout_append(&cpkt, layout, i);
+		assert_same_msg(&cpkt, &expected, i);
+	}
+}
+
+/* Any option whose value fits is found, whatever the options around it, and
+ * an option that is not there is not.
+ */
+ZTEST_P(coap, test_find_coap_option_layout)
+{
+	static uint8_t buf[OPTION_LAYOUT_BUF_SIZE];
+	const struct option_layout *layout = ZTEST_GET_PARAM_PTR(struct option_layout);
+	struct coap_option options[OPTION_LAYOUT_MAX_OPTIONS];
+	struct coap_packet cpkt;
+	int r;
+
+	option_layout_init(&cpkt, buf, layout, layout->num_options);
+
+	for (size_t i = 0; i < layout->num_options; i++) {
+		const uint16_t code = layout->options[i].code;
+		size_t first = i;
+		size_t count = 0;
+		bool fits = true;
+
+		for (size_t j = 0; j < layout->num_options; j++) {
+			if (layout->options[j].code != code) {
+				continue;
+			}
+
+			if (count == 0) {
+				first = j;
+			}
+
+			count++;
+			fits = fits && layout->options[j].len <= sizeof(options[0].value);
+		}
+
+		r = coap_find_options(&cpkt, code, options, ARRAY_SIZE(options));
+		if (!fits) {
+			zassert_equal(r, -EINVAL, "Option %zu does not fit, got %d", i, r);
+		} else {
+			zassert_equal(r, count, "Option %zu not found, got %d", i, r);
+
+			for (size_t j = 0; j < count; j++) {
+				zassert_equal(options[j].delta, code, "Wrong code, option %zu", i);
+				zassert_equal(options[j].len, layout->options[first + j].len,
+					      "Wrong length, option %zu", i);
+
+				for (size_t k = 0; k < options[j].len; k++) {
+					zassert_equal(options[j].value[k],
+						      option_layout_value(first + j, k),
+						      "Wrong value, option %zu", i);
+				}
+			}
+		}
+
+		/* the code behind it, unless the next option has that */
+		if (i + 1 == layout->num_options || layout->options[i + 1].code > code + 1) {
+			r = coap_find_options(&cpkt, code + 1, options, ARRAY_SIZE(options));
+			zassert_equal(r, 0, "Found an option behind option %zu, got %d", i, r);
+		}
+	}
+
+	r = coap_find_options(&cpkt, 0, options, ARRAY_SIZE(options));
+	zassert_equal(r, 0, "Found an option in front of the first, got %d", r);
+}
+
 ZTEST(coap, test_coap_packet_options_with_large_values)
 {
 	int r;
@@ -2577,3 +2790,9 @@ ZTEST(coap, test_response_first_observe_value)
 }
 
 ZTEST_SUITE(coap, NULL, NULL, NULL, NULL, NULL);
+ZTEST_INSTANTIATE_TEST_SUITE_P(layouts, coap, test_remove_coap_option_layout,
+			       option_layout_values);
+ZTEST_INSTANTIATE_TEST_SUITE_P(layouts, coap, test_append_coap_option_layout,
+			       option_layout_values);
+ZTEST_INSTANTIATE_TEST_SUITE_P(layouts, coap, test_find_coap_option_layout,
+			       option_layout_values);
