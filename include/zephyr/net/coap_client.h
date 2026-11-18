@@ -240,6 +240,10 @@ struct coap_client {
 	/* Entry of dedup_cache the next response replaces */
 	uint8_t dedup_next;
 	struct coap_option echo_option;
+	/* Socket and peer address echo_option came from, to send it back to */
+	int echo_fd;
+	struct net_sockaddr_storage echo_addr;
+	net_socklen_t echo_addrlen;
 	bool send_echo;
 	/** @endcond */
 };

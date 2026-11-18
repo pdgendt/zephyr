@@ -117,6 +117,25 @@ static void release_internal_request(struct coap_client_internal_request *reques
 	request->unreported_error = 0;
 }
 
+/* RFC 9175, section 2.3: an Echo option value is only sent to the endpoint it
+ * came from. A request without address goes out on a connected socket, where
+ * the socket stands for the endpoint.
+ */
+static bool echo_source_matches(const struct coap_client *client, int sock,
+				const struct coap_client_internal_request *internal_req)
+{
+	if (client->echo_fd != sock) {
+		return false;
+	}
+
+	if (client->echo_addrlen == 0U || internal_req->addrlen == 0U) {
+		return true;
+	}
+
+	return net_sockaddr_cmp((const struct net_sockaddr *)&client->echo_addr,
+				(const struct net_sockaddr *)&internal_req->addr);
+}
+
 /* Whether the request went to a multicast address, which does not take
  * CONFIG_COAP_CLIENT_MULTICAST.
  */
@@ -573,7 +592,7 @@ int coap_client_req(struct coap_client *client, int sock, const struct net_socka
 		goto release;
 	}
 
-	if (client->send_echo) {
+	if (client->send_echo && echo_source_matches(client, sock, internal_req)) {
 		ret = coap_packet_append_option(&internal_req->request, COAP_OPTION_ECHO,
 						client->echo_option.value, client->echo_option.len);
 		if (ret < 0) {
@@ -1180,6 +1199,31 @@ static struct coap_client_internal_request *get_request_with_mid(struct coap_cli
 	return NULL;
 }
 
+/* Remember where the Echo option value of a response came from: its source,
+ * or the address of the request when the transport reported none. Returns
+ * false when that names no single endpoint, as for a multicast request.
+ */
+static bool keep_echo_source(struct coap_client *client,
+			     const struct coap_client_internal_request *internal_req,
+			     const struct net_sockaddr *from, net_socklen_t fromlen)
+{
+	if (from->sa_family != NET_AF_UNSPEC) {
+		client->echo_addrlen = MIN(fromlen, sizeof(client->echo_addr));
+		memcpy(&client->echo_addr, from, client->echo_addrlen);
+	} else {
+		if (sent_to_group(internal_req)) {
+			return false;
+		}
+
+		client->echo_addr = internal_req->addr;
+		client->echo_addrlen = internal_req->addrlen;
+	}
+
+	client->echo_fd = client->fd;
+
+	return true;
+}
+
 #if CONFIG_COAP_CLIENT_DEDUP_CACHE_SIZE > 0
 /* RFC 7252, section 4.5: whether this message was received before, going by
  * its source and message ID. An Acknowledgment carries a message ID of this
@@ -1555,8 +1599,8 @@ static int handle_response(struct coap_client *client, const struct net_sockaddr
 	/* Received echo option */
 	if (find_echo_option(response, &client->echo_option)) {
 		if (response_code != COAP_RESPONSE_CODE_UNAUTHORIZED) {
-			/* Send echo in next request */
-			client->send_echo = true;
+			/* Send echo in next request to this endpoint */
+			client->send_echo = keep_echo_source(client, internal_req, addr, addrlen);
 		} else if (awaits_response(internal_req)) {
 			/* With no request waiting there is nothing to retry, and
 			 * the challenge is an error response like any other. The
