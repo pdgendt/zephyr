@@ -4710,9 +4710,36 @@ static ssize_t z_impl_zsock_sendto_custom_fake_multicast(int sock, void *buf, si
 	return 1;
 }
 
+/* Destinations of the Acknowledgments the client sent */
+static uint32_t multicast_ack_addr[2];
+static int multicast_ack_count;
+
+static ssize_t z_impl_zsock_sendto_custom_fake_multicast_acks(int sock, void *buf, size_t len,
+							      int flags,
+							      const struct net_sockaddr *dest_addr,
+							      net_socklen_t addrlen)
+{
+	struct coap_packet pkt = {0};
+
+	zassert_ok(coap_packet_parse(&pkt, buf, len, NULL, 0), "Failed to parse packet");
+
+	if (coap_header_get_type(&pkt) != COAP_TYPE_ACK) {
+		return z_impl_zsock_sendto_custom_fake_multicast(sock, buf, len, flags, dest_addr,
+								 addrlen);
+	}
+
+	zassert_equal(coap_header_get_code(&pkt), COAP_CODE_EMPTY, "Unexpected ACK");
+	zassert_equal(coap_header_get_id(&pkt), multicast_message_id, "Unexpected ACK");
+	zassert_true(multicast_ack_count < ARRAY_SIZE(multicast_ack_addr), "Too many ACKs");
+	multicast_ack_addr[multicast_ack_count++] = net_ntohl(net_sin(dest_addr)->sin_addr.s_addr);
+
+	return 1;
+}
+
 static ssize_t zsock_recvfrom_custom_fake_multicast(int sock, void *buf, size_t max_len, int flags,
 						    struct net_sockaddr *src_addr,
-						    net_socklen_t *addrlen, bool confirmable)
+						    net_socklen_t *addrlen, bool confirmable,
+						    bool same_source)
 {
 	/* NON response: VV=01, TT=01(NON), TKL=8, Code=2.05 Content. */
 	uint8_t resp_data[] = {0x58, 0x45, 0x00, 0x00, 0x00, 0x00,
@@ -4732,14 +4759,16 @@ static ssize_t zsock_recvfrom_custom_fake_multicast(int sock, void *buf, size_t 
 	zassert_not_null(src_addr, "Unexpected NULL source address");
 	zassert_not_null(addrlen, "Unexpected NULL source address length");
 
-	/* Simulate a different IPv4 source for each responding server */
+	/* Simulate a different IPv4 source for each responding server, or one
+	 * server that sends its response again
+	 */
 	addr4 = (struct net_sockaddr_in *)src_addr;
 
 	memset(addr4, 0, sizeof(*addr4));
 	addr4->sin_family = NET_AF_INET;
 	addr4->sin_port = net_htons(MULTICAST_SERVER_PORT);
 	addr4->sin_addr.s_addr =
-		net_htonl(MULTICAST_SERVER_START_IP + multicast_recv_index);
+		net_htonl(MULTICAST_SERVER_START_IP + (same_source ? 0 : multicast_recv_index));
 	*addrlen = sizeof(*addr4);
 
 	multicast_recv_index++;
@@ -4761,7 +4790,7 @@ static ssize_t z_impl_zsock_recvfrom_custom_fake_multicast(int sock, void *buf, 
 							   net_socklen_t *addrlen)
 {
 	return zsock_recvfrom_custom_fake_multicast(sock, buf, max_len, flags, src_addr, addrlen,
-						    false);
+						    false, false);
 }
 
 static ssize_t z_impl_zsock_recvfrom_custom_fake_multicast_con(int sock, void *buf, size_t max_len,
@@ -4770,7 +4799,16 @@ static ssize_t z_impl_zsock_recvfrom_custom_fake_multicast_con(int sock, void *b
 							       net_socklen_t *addrlen)
 {
 	return zsock_recvfrom_custom_fake_multicast(sock, buf, max_len, flags, src_addr, addrlen,
-						    true);
+						    true, false);
+}
+
+static ssize_t z_impl_zsock_recvfrom_custom_fake_multicast_con_again(int sock, void *buf,
+								     size_t max_len, int flags,
+								     struct net_sockaddr *src_addr,
+								     net_socklen_t *addrlen)
+{
+	return zsock_recvfrom_custom_fake_multicast(sock, buf, max_len, flags, src_addr, addrlen,
+						    true, true);
 }
 
 /* Two servers answer, then the first one's response arrives once more */
@@ -4781,7 +4819,7 @@ static ssize_t z_impl_zsock_recvfrom_custom_fake_multicast_again(int sock, void 
 {
 	int index = multicast_recv_index;
 	ssize_t ret = zsock_recvfrom_custom_fake_multicast(sock, buf, max_len, flags, src_addr,
-							   addrlen, false);
+							   addrlen, false, false);
 
 	if (index == 1) {
 		set_socket_events(sock, ZSOCK_POLLIN);
@@ -4907,11 +4945,16 @@ ZTEST(coap_client, test_multicast_response_duplicated)
 	zassert_true(multicast_completed, "Expected completion callback after timeout");
 }
 
-ZTEST(coap_client, test_multicast_con_response_rejected)
+/* RFC 7252, section 5.2.3: the response to a Non-confirmable request should be
+ * Non-confirmable, yet a client is to expect a Confirmable one. Each is
+ * acknowledged to the server it came from and reaches the application.
+ */
+ZTEST(coap_client, test_multicast_con_responses)
 {
 	multicast_response_count = 0;
 	multicast_completed = false;
 	multicast_recv_index = 0;
+	multicast_ack_count = 0;
 
 	struct coap_client_request req = {
 		.method = COAP_METHOD_GET,
@@ -4923,7 +4966,7 @@ ZTEST(coap_client, test_multicast_con_response_rejected)
 		.user_data = &sem1,
 	};
 
-	z_impl_zsock_sendto_fake.custom_fake = z_impl_zsock_sendto_custom_fake_multicast;
+	z_impl_zsock_sendto_fake.custom_fake = z_impl_zsock_sendto_custom_fake_multicast_acks;
 	z_impl_zsock_recvfrom_fake.custom_fake = z_impl_zsock_recvfrom_custom_fake_multicast_con;
 	/* POLLIN delivers CON responses; POLLOUT enables timeout detection */
 	set_socket_events(client.fd, ZSOCK_POLLIN | ZSOCK_POLLOUT);
@@ -4931,14 +4974,55 @@ ZTEST(coap_client, test_multicast_con_response_rejected)
 	zassert_ok(coap_client_req(&client, 0, (const struct net_sockaddr *)&mcast_address, &req,
 				   NULL));
 
-	/* Only the completion callback is expected; the client silently drops CON
-	 * responses, which RFC 7252 section 5.2.3 expects to be Non-confirmable.
-	 */
+	/* Two response callbacks, then the completion callback */
+	zassert_ok(k_sem_take(&sem1, K_MSEC(MORE_THAN_EXCHANGE_LIFETIME_MS)));
+	zassert_ok(k_sem_take(&sem1, K_MSEC(MORE_THAN_EXCHANGE_LIFETIME_MS)));
 	zassert_ok(k_sem_take(&sem1, K_MSEC(MORE_THAN_EXCHANGE_LIFETIME_MS)));
 
-	zassert_equal(multicast_response_count, 0,
-		      "CON responses must be rejected in multicast mode");
+	zassert_equal(multicast_response_count, 2, "Expected 2 streamed responses");
 	zassert_true(multicast_completed, "Expected completion callback after timeout");
+	zassert_equal(multicast_ack_count, 2, "Each CON response must be acknowledged");
+	zassert_equal(multicast_ack_addr[0], MULTICAST_SERVER_START_IP);
+	zassert_equal(multicast_ack_addr[1], MULTICAST_SERVER_START_IP + 1);
+}
+
+/* A server that does not get the Acknowledgment sends its Confirmable response
+ * again: both copies are acknowledged, one reaches the application.
+ */
+ZTEST(coap_client, test_multicast_con_response_retransmitted)
+{
+	multicast_response_count = 0;
+	multicast_completed = false;
+	multicast_recv_index = 0;
+	multicast_ack_count = 0;
+
+	struct coap_client_request req = {
+		.method = COAP_METHOD_GET,
+		.confirmable = false,
+		.path = TEST_PATH,
+		.fmt = COAP_CONTENT_FORMAT_TEXT_PLAIN,
+		.cb = multicast_coap_callback,
+		.multicast_timeout_ms = MULTICAST_TIMEOUT_MS,
+		.user_data = &sem1,
+	};
+
+	z_impl_zsock_sendto_fake.custom_fake = z_impl_zsock_sendto_custom_fake_multicast_acks;
+	z_impl_zsock_recvfrom_fake.custom_fake =
+		z_impl_zsock_recvfrom_custom_fake_multicast_con_again;
+	set_socket_events(client.fd, ZSOCK_POLLIN | ZSOCK_POLLOUT);
+
+	zassert_ok(coap_client_req(&client, 0, (const struct net_sockaddr *)&mcast_address, &req,
+				   NULL));
+
+	/* One response callback, then the completion callback */
+	zassert_ok(k_sem_take(&sem1, K_MSEC(MORE_THAN_EXCHANGE_LIFETIME_MS)));
+	zassert_ok(k_sem_take(&sem1, K_MSEC(MORE_THAN_EXCHANGE_LIFETIME_MS)));
+
+	zassert_equal(multicast_response_count, 1, "The response must be delivered once");
+	zassert_true(multicast_completed, "Expected completion callback after timeout");
+	zassert_equal(multicast_ack_count, 2, "Both copies must be acknowledged");
+	zassert_equal(multicast_ack_addr[0], MULTICAST_SERVER_START_IP);
+	zassert_equal(multicast_ack_addr[1], MULTICAST_SERVER_START_IP);
 }
 #else /* CONFIG_COAP_CLIENT_MULTICAST */
 /* NON response from a group member's unicast address */

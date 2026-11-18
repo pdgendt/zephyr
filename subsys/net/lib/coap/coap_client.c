@@ -1565,24 +1565,20 @@ static int handle_response(struct coap_client *client, const struct net_sockaddr
 		const struct net_sockaddr *ack_addr;
 		net_socklen_t ack_addrlen;
 
-#if defined(CONFIG_COAP_CLIENT_MULTICAST)
-		if (internal_req->is_mcast) {
-			/* RFC 7252, section 5.2.3: the response to a Non-confirmable
-			 * request, which a multicast request always is, should be
-			 * Non-confirmable. A Confirmable one is dropped without an
-			 * Acknowledgment.
-			 */
-			LOG_WRN("Dropping CON response to multicast request");
-			return 0;
-		}
-#endif
-		/* CON response is always a separate response, respond with empty ACK. */
+		/* CON response is always a separate response, respond with empty ACK.
+		 * That goes for a multicast request too: its response should be
+		 * Non-confirmable, yet a Confirmable one is to be expected
+		 * (RFC 7252, section 5.2.3).
+		 */
 		if (select_reply_addr(internal_req, addr, addrlen, &ack_addr, &ack_addrlen)) {
 			ret = send_ack(client->fd, ack_addr, ack_addrlen, response,
 				       COAP_CODE_EMPTY);
-			if (ret < 0) {
+			if (ret < 0 && !sent_to_group(internal_req)) {
 				goto fail;
 			}
+
+			/* One server out of reach does not fail a multicast request */
+			ret = 0;
 		}
 	}
 
