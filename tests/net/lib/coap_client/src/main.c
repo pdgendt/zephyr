@@ -1745,6 +1745,80 @@ ZTEST(coap_client, test_echo_option_next_req)
 	zassert_equal(last_response_code, COAP_RESPONSE_CODE_CONTENT, "Unexpected response");
 }
 
+/* Whether the last request sent carried an Echo option */
+static bool echo_sent;
+
+/* Note the Echo option of a request, and answer only one sent to dst_address */
+static ssize_t z_impl_zsock_sendto_custom_fake_note_echo(int sock, void *buf, size_t len,
+							 int flags,
+							 const struct net_sockaddr *dest_addr,
+							 net_socklen_t addrlen)
+{
+	struct coap_packet request = {0};
+	struct coap_option option = {0};
+
+	zassert_ok(coap_packet_parse(&request, buf, len, NULL, 0), "Failed to parse packet");
+	echo_sent = coap_find_options(&request, COAP_OPTION_ECHO, &option, 1) == 1;
+
+	if (!net_sockaddr_cmp(dest_addr, net_sad(&dst_address))) {
+		return 1;
+	}
+
+	return z_impl_zsock_sendto_custom_fake(sock, buf, len, flags, dest_addr, addrlen);
+}
+
+static ssize_t z_impl_zsock_recvfrom_custom_fake_echo_note_next(int sock, void *buf,
+								size_t max_len, int flags,
+								struct net_sockaddr *src_addr,
+								net_socklen_t *addrlen)
+{
+	ssize_t ret = z_impl_zsock_recvfrom_custom_fake_echo_next_req(sock, buf, max_len, flags,
+								      src_addr, addrlen);
+
+	z_impl_zsock_recvfrom_fake.custom_fake = z_impl_zsock_recvfrom_custom_fake;
+	z_impl_zsock_sendto_fake.custom_fake = z_impl_zsock_sendto_custom_fake_note_echo;
+
+	return ret;
+}
+
+/* The Echo option value of a response is for the endpoint it came from
+ * (RFC 9175 section 2.3): a request to another one does not carry it, the
+ * next request to that endpoint does.
+ */
+ZTEST(coap_client, test_echo_option_next_req_other_endpoint)
+{
+	struct coap_client_request req = {
+		.method = COAP_METHOD_GET,
+		.confirmable = true,
+		.path = TEST_PATH,
+		.fmt = COAP_CONTENT_FORMAT_TEXT_PLAIN,
+		.cb = coap_callback,
+		.user_data = &sem1,
+	};
+
+	z_impl_zsock_recvfrom_fake.custom_fake = z_impl_zsock_recvfrom_custom_fake_echo_note_next;
+
+	zassert_ok(coap_client_req(&client, 0, net_sad(&dst_address), &req, NULL));
+	zassert_ok(k_sem_take(&sem1, K_MSEC(MORE_THAN_EXCHANGE_LIFETIME_MS)));
+	zassert_equal(last_response_code, COAP_RESPONSE_CODE_CONTENT, "Unexpected response");
+
+	wait_callbacks_done();
+	echo_sent = true;
+	zassert_ok(coap_client_req(&client, 0,
+				   (const struct net_sockaddr *)&recv_wrong_src_address, &req,
+				   NULL));
+	zassert_false(echo_sent, "Echo option sent to another endpoint");
+	coap_client_cancel_requests(&client);
+	zassert_ok(k_sem_take(&sem1, K_MSEC(MORE_THAN_EXCHANGE_LIFETIME_MS)));
+	zassert_equal(last_response_code, -ECANCELED, "Unexpected response");
+
+	wait_callbacks_done();
+	zassert_ok(coap_client_req(&client, 0, net_sad(&dst_address), &req, NULL));
+	zassert_ok(k_sem_take(&sem1, K_MSEC(MORE_THAN_EXCHANGE_LIFETIME_MS)));
+	zassert_equal(last_response_code, COAP_RESPONSE_CODE_CONTENT, "Unexpected response");
+	zassert_true(echo_sent, "Echo option not sent to its endpoint");
+}
+
 ZTEST(coap_client, test_get_no_path)
 {
 	struct coap_client_request req = short_request;
