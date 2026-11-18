@@ -1567,10 +1567,12 @@ static int handle_response(struct coap_client *client, const struct net_sockaddr
 
 #if defined(CONFIG_COAP_CLIENT_MULTICAST)
 		if (internal_req->is_mcast) {
-			/* RFC 7252 Section 8.2: Responses to multicast requests MUST NOT be
-			 * Confirmable. Drop the invalid response.
+			/* RFC 7252, section 5.2.3: the response to a Non-confirmable
+			 * request, which a multicast request always is, should be
+			 * Non-confirmable. A Confirmable one is dropped without an
+			 * Acknowledgment.
 			 */
-			LOG_WRN("Dropping CON response to multicast request (RFC 7252 violation)");
+			LOG_WRN("Dropping CON response to multicast request");
 			return 0;
 		}
 #endif

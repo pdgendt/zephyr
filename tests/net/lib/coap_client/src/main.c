@@ -4931,8 +4931,8 @@ ZTEST(coap_client, test_multicast_con_response_rejected)
 	zassert_ok(coap_client_req(&client, 0, (const struct net_sockaddr *)&mcast_address, &req,
 				   NULL));
 
-	/* Only the completion callback is expected; CON responses must be silently dropped
-	 * per RFC 7252 Section 8.2 (responses to multicast MUST NOT be Confirmable).
+	/* Only the completion callback is expected; the client silently drops CON
+	 * responses, which RFC 7252 section 5.2.3 expects to be Non-confirmable.
 	 */
 	zassert_ok(k_sem_take(&sem1, K_MSEC(MORE_THAN_EXCHANGE_LIFETIME_MS)));
 
